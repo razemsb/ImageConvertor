@@ -29,7 +29,7 @@
 
 1. Клонируйте репозиторий:
 ```bash
-git clone https://github.com/your-username/image_to_webp_converter.git
+git clone https://github.com/razemsb/image_to_webp_converter.git
 ```
 
 2. Разместите файлы в директории вашего веб-сервера
