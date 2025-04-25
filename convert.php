@@ -3,140 +3,84 @@ header('Content-Type: application/json');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Создаем директории, если они не существуют
-$originalDir = 'original/';
-$convertedDir = 'converted/';
-
-if (!file_exists($originalDir)) {
-    mkdir($originalDir, 0777, true);
-}
-if (!file_exists($convertedDir)) {
-    mkdir($convertedDir, 0777, true);
+// Проверка наличия файла
+if (!isset($_FILES['image'])) {
+    die(json_encode(['error' => 'Файл не загружен']));
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_FILES['image'])) {
-        $file = $_FILES['image'];
-        $fileName = $file['name'];
-        $fileTmpName = $file['tmp_name'];
-        $fileError = $file['error'];
+$file = $_FILES['image'];
+$format = $_POST['format'] ?? 'webp';
+$quality = intval($_POST['quality'] ?? 80);
 
-        if ($fileError === 0) {
-            // Генерируем случайное имя файла
-            $randomName = uniqid() . '_' . time();
-            $originalPath = $originalDir . $randomName . '_' . $fileName;
-            $convertedPath = $convertedDir . $randomName . '.webp';
+// Проверка ошибок загрузки
+if ($file['error'] !== UPLOAD_ERR_OK) {
+    die(json_encode(['error' => 'Ошибка загрузки файла']));
+}
 
-            // Сохраняем оригинальное изображение
-            if (!move_uploaded_file($fileTmpName, $originalPath)) {
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'Ошибка при сохранении оригинального файла: ' . error_get_last()['message']
-                ]);
-                exit;
-            }
+// Проверка типа файла
+$allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+if (!in_array($file['type'], $allowed_types)) {
+    die(json_encode(['error' => 'Неподдерживаемый формат файла']));
+}
 
-            // Конвертируем в WebP
-            $image = null;
-            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+// Создание директории для сохранения
+$upload_dir = 'converted/';
+if (!file_exists($upload_dir)) {
+    mkdir($upload_dir, 0777, true);
+}
 
-            try {
-                switch ($extension) {
-                    case 'jpeg':
-                    case 'jpg':
-                        $image = imagecreatefromjpeg($originalPath);
-                        break;
-                    case 'png':
-                        $image = imagecreatefrompng($originalPath);
-                        break;
-                    case 'gif':
-                        $image = imagecreatefromgif($originalPath);
-                        break;
-                    default:
-                        throw new Exception('Неподдерживаемый формат файла: ' . $extension);
-                }
+// Загрузка изображения
+$source_image = null;
+switch ($file['type']) {
+    case 'image/jpeg':
+        $source_image = imagecreatefromjpeg($file['tmp_name']);
+        break;
+    case 'image/png':
+        $source_image = imagecreatefrompng($file['tmp_name']);
+        break;
+    case 'image/gif':
+        $source_image = imagecreatefromgif($file['tmp_name']);
+        break;
+}
 
-                if (!$image) {
-                    throw new Exception('Не удалось создать изображение из файла');
-                }
+if (!$source_image) {
+    die(json_encode(['error' => 'Не удалось загрузить изображение']));
+}
 
-                // Получаем размеры изображения
-                $width = imagesx($image);
-                $height = imagesy($image);
+// Генерация имени файла
+$filename = uniqid() . '.' . $format;
+$output_path = $upload_dir . $filename;
 
-                // Если изображение слишком большое, уменьшаем его
-                $maxDimension = 2000;
-                if ($width > $maxDimension || $height > $maxDimension) {
-                    $ratio = $width / $height;
-                    if ($ratio > 1) {
-                        $newWidth = $maxDimension;
-                        $newHeight = $maxDimension / $ratio;
-                    } else {
-                        $newHeight = $maxDimension;
-                        $newWidth = $maxDimension * $ratio;
-                    }
-                    
-                    $resizedImage = imagecreatetruecolor($newWidth, $newHeight);
-                    
-                    // Сохраняем прозрачность для PNG
-                    if ($extension === 'png') {
-                        imagealphablending($resizedImage, false);
-                        imagesavealpha($resizedImage, true);
-                    }
-                    
-                    imagecopyresampled($resizedImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-                    imagedestroy($image);
-                    $image = $resizedImage;
-                }
+// Сохранение в выбранном формате
+$success = false;
+switch ($format) {
+    case 'webp':
+        $success = imagewebp($source_image, $output_path, $quality);
+        break;
+    case 'avif':
+        // Для AVIF качество от 0 до 100
+        $success = imageavif($source_image, $output_path, $quality);
+        break;
+    case 'jpeg':
+        $success = imagejpeg($source_image, $output_path, $quality);
+        break;
+    case 'png':
+        // Для PNG качество от 0 до 9
+        $png_quality = round(9 - ($quality / 100 * 9));
+        $success = imagepng($source_image, $output_path, $png_quality);
+        break;
+}
 
-                // Оптимальные настройки для WebP
-                $quality = 80; // Баланс между качеством и размером
-                $lossless = false; // Используем сжатие с потерями для меньшего размера
+// Освобождение памяти
+imagedestroy($source_image);
 
-                // Сохраняем в WebP с оптимизированными настройками
-                if (!imagewebp($image, $convertedPath, $quality)) {
-                    throw new Exception('Ошибка при сохранении WebP: ' . error_get_last()['message']);
-                }
-
-                imagedestroy($image);
-
-                // Получаем размеры файлов для сравнения
-                $originalSize = filesize($originalPath);
-                $convertedSize = filesize($convertedPath);
-                $compressionRatio = round(($originalSize - $convertedSize) / $originalSize * 100, 2);
-
-                echo json_encode([
-                    'success' => true,
-                    'original' => $originalPath,
-                    'converted' => $convertedPath,
-                    'originalSize' => $originalSize,
-                    'convertedSize' => $convertedSize,
-                    'compressionRatio' => $compressionRatio
-                ]);
-            } catch (Exception $e) {
-                if ($image) {
-                    imagedestroy($image);
-                }
-                echo json_encode([
-                    'success' => false,
-                    'error' => $e->getMessage()
-                ]);
-            }
-        } else {
-            echo json_encode([
-                'success' => false,
-                'error' => 'Ошибка при загрузке файла: ' . $fileError
-            ]);
-        }
-    } else {
-        echo json_encode([
-            'success' => false,
-            'error' => 'Файл не был загружен'
-        ]);
-    }
-} else {
+if ($success) {
     echo json_encode([
-        'success' => false,
-        'error' => 'Неверный метод запроса'
+        'success' => true,
+        'file' => $filename,
+        'path' => $output_path
     ]);
-} 
+} else {
+    echo json_encode(['error' => 'Ошибка при конвертации']);
+}
+?> 
