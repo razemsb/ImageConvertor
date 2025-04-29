@@ -5,7 +5,8 @@ ini_set('display_errors', 1);
 
 // Проверка наличия файла
 if (!isset($_FILES['image'])) {
-    die(json_encode(['error' => 'Файл не загружен']));
+    header('HTTP/1.1 400 Bad Request');
+    die('Файл не загружен');
 }
 
 $file = $_FILES['image'];
@@ -14,13 +15,26 @@ $quality = intval($_POST['quality'] ?? 80);
 
 // Проверка ошибок загрузки
 if ($file['error'] !== UPLOAD_ERR_OK) {
-    die(json_encode(['error' => 'Ошибка загрузки файла']));
+    header('HTTP/1.1 400 Bad Request');
+    die('Ошибка загрузки файла');
 }
 
 // Проверка типа файла
 $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
 if (!in_array($file['type'], $allowed_types)) {
-    die(json_encode(['error' => 'Неподдерживаемый формат файла']));
+    header('HTTP/1.1 400 Bad Request');
+    die('Неподдерживаемый формат файла');
+}
+
+// Проверка поддержки форматов
+if ($format === 'webp' && !function_exists('imagewebp')) {
+    header('HTTP/1.1 400 Bad Request');
+    die('WebP не поддерживается на этом сервере');
+}
+
+if ($format === 'avif' && !function_exists('imageavif')) {
+    header('HTTP/1.1 400 Bad Request');
+    die('AVIF не поддерживается на этом сервере');
 }
 
 // Создание директории для сохранения
@@ -37,6 +51,11 @@ switch ($file['type']) {
         break;
     case 'image/png':
         $source_image = imagecreatefrompng($file['tmp_name']);
+        if ($source_image) {
+            // Сохраняем прозрачность для PNG
+            imagealphablending($source_image, true);
+            imagesavealpha($source_image, true);
+        }
         break;
     case 'image/gif':
         $source_image = imagecreatefromgif($file['tmp_name']);
@@ -44,21 +63,21 @@ switch ($file['type']) {
 }
 
 if (!$source_image) {
-    die(json_encode(['error' => 'Не удалось загрузить изображение']));
+    header('HTTP/1.1 500 Internal Server Error');
+    die('Не удалось загрузить изображение');
 }
 
 // Генерация имени файла
 $filename = uniqid() . '.' . $format;
 $output_path = $upload_dir . $filename;
 
-// Сохранение в выбранном формате
+// Конвертация и сохранение
 $success = false;
 switch ($format) {
     case 'webp':
         $success = imagewebp($source_image, $output_path, $quality);
         break;
     case 'avif':
-        // Для AVIF качество от 0 до 100
         $success = imageavif($source_image, $output_path, $quality);
         break;
     case 'jpeg':
@@ -75,12 +94,18 @@ switch ($format) {
 imagedestroy($source_image);
 
 if ($success) {
+    // Возвращаем информацию о сохраненном файле
     echo json_encode([
         'success' => true,
-        'file' => $filename,
-        'path' => $output_path
+        'filename' => $filename,
+        'path' => $output_path,
+        'originalName' => $file['name'],
+        'format' => $format,
+        'quality' => $quality,
+        'timestamp' => time()
     ]);
 } else {
-    echo json_encode(['error' => 'Ошибка при конвертации']);
+    header('HTTP/1.1 500 Internal Server Error');
+    die('Ошибка при конвертации');
 }
 ?> 

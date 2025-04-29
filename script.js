@@ -1,155 +1,258 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const preview = document.getElementById('preview');
-    const progressBar = document.getElementById('progressBar');
-    const progressBarInner = progressBar.querySelector('div > div');
+    const formatSelect = document.getElementById('format');
     const qualitySlider = document.getElementById('quality');
     const qualityValue = document.querySelector('.quality-value');
+    const progressBar = document.getElementById('progressBar');
+    const progressBarInner = progressBar.querySelector('div');
+    const historyContainer = document.getElementById('history');
 
-    // Обновление значения качества
-    qualitySlider.addEventListener('input', function() {
-        qualityValue.textContent = this.value + '%';
-    });
+    // Загрузка истории конвертаций
+    let conversionHistory = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
 
-    // Обработка клика по зоне загрузки
-    dropZone.addEventListener('click', () => {
-        fileInput.click();
-    });
+    // Отображение истории при загрузке страницы
+    displayHistory();
 
-    // Обработка выбора файлов
-    fileInput.addEventListener('change', handleFiles);
+    // Функция отображения истории
+    function displayHistory() {
+        historyContainer.innerHTML = '';
+        
+        if (conversionHistory.length === 0) {
+            historyContainer.innerHTML = `
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-history text-4xl mb-4"></i>
+                    <p>История конвертаций пуста</p>
+                </div>
+            `;
+            return;
+        }
 
-    // Обработка drag & drop
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
-    });
-
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('dragover');
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        handleFiles({ target: { files: e.dataTransfer.files } });
-    });
-
-    function handleFiles(e) {
-        const files = e.target.files;
-        if (files.length === 0) return;
-
-        progressBar.classList.remove('hidden');
-        let processed = 0;
-
-        Array.from(files).forEach((file, index) => {
-            if (!file.type.startsWith('image/')) {
-                showError(`Файл ${file.name} не является изображением`);
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('image', file);
-            formData.append('format', document.getElementById('format').value);
-            formData.append('quality', document.getElementById('quality').value);
-
-            const previewItem = createPreviewItem(file);
-            preview.appendChild(previewItem);
-
-            fetch('convert.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updatePreviewStatus(previewItem, 'success', 'Конвертировано', data.path);
-                    processed++;
-                    updateProgress(processed, files.length);
-                } else {
-                    updatePreviewStatus(previewItem, 'error', data.error);
-                }
-            })
-            .catch(error => {
-                updatePreviewStatus(previewItem, 'error', 'Ошибка при конвертации');
-                console.error('Error:', error);
+        conversionHistory.forEach((item, index) => {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item glass-effect p-4 rounded-xl flex items-center justify-between';
+            
+            const date = new Date(item.timestamp * 1000);
+            const formattedDate = date.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             });
+
+            historyItem.innerHTML = `
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-file-image text-blue-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-gray-800">${item.originalName}</h3>
+                        <p class="text-sm text-gray-500">
+                            Конвертировано в ${item.format.toUpperCase()} (качество: ${item.quality}%)
+                        </p>
+                        <p class="text-xs text-gray-400">${formattedDate}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <a href="${item.path}" target="_blank" class="text-blue-500 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50">
+                        <i class="fas fa-download"></i>
+                    </a>
+                    <button onclick="deleteHistoryItem(${index})" class="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+
+            historyContainer.appendChild(historyItem);
         });
     }
 
-    function createPreviewItem(file) {
-        const div = document.createElement('div');
-        div.className = 'preview-item flex items-center p-4 bg-white rounded-xl shadow-sm border border-gray-200';
-        div.innerHTML = `
-            <div class="flex-shrink-0 w-20 h-20">
-                <img src="${URL.createObjectURL(file)}" alt="${file.name}" class="w-full h-full object-cover rounded-lg">
-            </div>
-            <div class="ml-4 flex-grow">
-                <h5 class="text-sm font-medium text-gray-900">${file.name}</h5>
-                <p class="text-sm text-gray-500">${formatFileSize(file.size)}</p>
-            </div>
-            <div class="ml-4 flex items-center space-x-3">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    <i class="fas fa-clock mr-1"></i>
-                    Ожидание
-                </span>
-            </div>
-        `;
-        return div;
+    // Функция удаления элемента из истории
+    window.deleteHistoryItem = function(index) {
+        conversionHistory.splice(index, 1);
+        localStorage.setItem('conversionHistory', JSON.stringify(conversionHistory));
+        displayHistory();
+    };
+
+    // Анимация при наведении на зону загрузки
+    dropZone.addEventListener('mouseenter', () => {
+        dropZone.style.transform = 'translateY(-2px)';
+    });
+
+    dropZone.addEventListener('mouseleave', () => {
+        dropZone.style.transform = 'translateY(0)';
+    });
+
+    // Обработка перетаскивания файлов
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
     }
 
-    function updatePreviewStatus(previewItem, status, message, filePath) {
-        const statusContainer = previewItem.querySelector('.ml-4.flex.items-center');
-        const icon = status === 'success' ? 'check-circle' : 'exclamation-circle';
-        const color = status === 'success' ? 'green' : 'red';
-        
-        let statusHTML = `
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-${color}-100 text-${color}-800">
-                <i class="fas fa-${icon} mr-1"></i>${message}
-            </span>
-        `;
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
 
-        if (status === 'success' && filePath) {
-            statusHTML += `
-                <button onclick="window.open('${filePath}', '_blank')" class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors duration-200">
-                    <i class="fas fa-folder-open mr-1"></i>
-                    Открыть
-                </button>
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        dropZone.classList.add('dragover');
+    }
+
+    function unhighlight(e) {
+        dropZone.classList.remove('dragover');
+    }
+
+    // Обработка выбора файлов
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFiles);
+    dropZone.addEventListener('drop', handleDrop);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles({ target: { files } });
+    }
+
+    function handleFiles(e) {
+        const files = [...e.target.files];
+        files.forEach(file => {
+            if (file.type.startsWith('image/')) {
+                previewAndConvertFile(file);
+            }
+        });
+    }
+
+    // Предпросмотр и конвертация файлов
+    function previewAndConvertFile(file) {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = function() {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-item p-4';
+            previewItem.innerHTML = `
+                <div class="relative">
+                    <img src="${reader.result}" class="w-full h-48 object-cover rounded-lg" alt="${file.name}">
+                    <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
+                        <div class="status-indicator text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                            Конвертация...
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <p class="text-sm font-medium text-gray-800">${file.name}</p>
+                    <p class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB</p>
+                </div>
             `;
-        }
 
-        statusContainer.innerHTML = statusHTML;
-    }
-
-    function updateProgress(processed, total) {
-        const percentage = (processed / total) * 100;
-        progressBarInner.style.width = `${percentage}%`;
-
-        if (processed === total) {
+            preview.appendChild(previewItem);
+            
+            // Анимация появления
+            previewItem.style.opacity = '0';
+            previewItem.style.transform = 'translateY(20px)';
             setTimeout(() => {
-                progressBar.classList.add('hidden');
-                progressBarInner.style.width = '0%';
-            }, 1000);
+                previewItem.style.opacity = '1';
+                previewItem.style.transform = 'translateY(0)';
+            }, 100);
+
+            // Сразу начинаем конвертацию
+            convertFile(file, previewItem);
+        };
+    }
+
+    // Конвертация файла
+    async function convertFile(file, previewItem) {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('format', formatSelect.value);
+        formData.append('quality', qualitySlider.value);
+
+        progressBar.classList.remove('hidden');
+        progressBarInner.style.width = '0%';
+
+        try {
+            const response = await fetch('convert.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Добавляем в историю
+                conversionHistory.unshift({
+                    originalName: data.originalName,
+                    convertedName: data.filename,
+                    format: data.format,
+                    quality: data.quality,
+                    timestamp: data.timestamp,
+                    path: data.path
+                });
+                
+                // Ограничиваем историю последними 50 конвертациями
+                if (conversionHistory.length > 50) {
+                    conversionHistory = conversionHistory.slice(0, 50);
+                }
+                
+                // Сохраняем историю
+                localStorage.setItem('conversionHistory', JSON.stringify(conversionHistory));
+                
+                // Обновляем статус в превью
+                const statusIndicator = previewItem.querySelector('.status-indicator');
+                statusIndicator.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <span>Конвертировано</span>
+                        <a href="${data.path}" target="_blank" class="text-blue-500 hover:text-blue-600">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                `;
+                statusIndicator.classList.add('bg-green-500');
+
+                // Анимация успешной конвертации
+                previewItem.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    previewItem.style.transform = 'scale(1)';
+                }, 200);
+
+                // Обновляем отображение истории
+                displayHistory();
+            } else {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Ошибка конвертации');
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            // Обновляем статус ошибки
+            const statusIndicator = previewItem.querySelector('.status-indicator');
+            statusIndicator.innerHTML = `
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                ${error.message}
+            `;
+            statusIndicator.classList.add('bg-red-500');
+            
+            // Анимация ошибки
+            previewItem.style.transform = 'translateX(-10px)';
+            setTimeout(() => {
+                previewItem.style.transform = 'translateX(0)';
+            }, 200);
+        } finally {
+            progressBar.classList.add('hidden');
         }
     }
 
-    function showError(message) {
-        const alert = document.createElement('div');
-        alert.className = 'p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg flex items-center';
-        alert.innerHTML = `
-            <i class="fas fa-exclamation-circle mr-2"></i>
-            ${message}
-        `;
-        preview.appendChild(alert);
-        setTimeout(() => alert.remove(), 5000);
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
+    // Обновление значения качества
+    qualitySlider.addEventListener('input', (e) => {
+        qualityValue.textContent = `${e.target.value}%`;
+    });
 }); 
