@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="50" height="50"><svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_24_2)">
+<path d="M50 0H0V50H50V0Z" fill="#2D1841"></path>
+<g filter="url(#filter0_d_24_2)">
+<path d="M38.4766 4.73633H11.5234C7.74805 4.73633 4.6875 7.79688 4.6875 11.5723V38.1836C4.6875 41.959 7.74805 45.0195 11.5234 45.0195H38.4766C42.2519 45.0195 45.3125 41.959 45.3125 38.1836V11.5723C45.3125 7.79688 42.2519 4.73633 38.4766 4.73633Z" fill="#211231"></path>
+</g>
+<path d="M10.4492 26.709C7.84141 25.6944 6.57358 25.3742 4.6875 25.0977V30.9082C6.38628 30.6884 7.53472 30.7695 9.61914 30.957C11.7117 31.4625 12.8585 31.6723 16.4062 33.5449V30.9082C14.3573 29.1956 13.0967 28.2647 10.4492 26.709Z" fill="#251436"></path>
+<path d="M16.4795 13.2568L16.4307 35.6689H33.5693L33.5449 30.8105L21.8994 30.7861V26.6846H31.7627V22.0459H21.8994V18.0908H33.4717V13.2568H16.4795Z" fill="#D9D9D9"></path>
+<path opacity="0.5" d="M33.6182 34.375C37.8411 32.4493 40.4124 30.0035 45.3125 23.5352V29.7852L45.2427 29.8986C42.828 33.8239 41.4527 36.0596 37.8662 38.623L37.837 38.6326C34.3419 39.7751 32.3733 40.4186 27.6855 39.6729C24.3288 38.3607 19.5801 35.791 19.5801 35.791H33.6182V34.375Z" fill="url(#paint0_linear_24_2)"></path>
+<path d="M29.6994 42.3028C33.1282 41.2675 34.9012 40.4136 37.8906 38.5742C34.7875 39.7237 32.9487 40.11 29.3213 39.8926C27.0377 39.4943 25.7643 39.0715 23.5107 37.793C21.2727 36.5963 20.4103 36.2159 19.1162 35.7178L16.3818 35.6934V33.5205C13.2488 31.8991 11.6579 31.2742 9.22852 30.8594C6.79912 30.4446 6.41738 30.8594 4.66309 30.8594L4.71191 37.793C4.71868 39.9568 4.91577 41.2968 6.86035 43.2861C8.92637 44.8214 10.2463 45.1966 12.8174 45.2148L21.875 45.0684C24.7363 43.7433 26.4781 43.1739 29.6994 42.3028Z" fill="#2B163D"></path>
+<path d="M6.63189 42.9941C9.02666 45.0677 10.9971 45.5409 16.3574 45.1267C16.1865 42.1631 14.5833 39.0761 11.9431 36.8508C9.16138 35.2571 7.57393 34.8201 4.6839 34.9981C4.62881 38.1718 4.31138 39.8028 6.63189 42.9941Z" fill="#331A44"></path>
+<path opacity="0.4" d="M36.8652 4.39453C36.8652 10.4621 41.784 15.3809 47.8516 15.3809C48.5868 15.3809 49.3052 15.3086 50 15.1709V0H37.7794C37.1914 1.34574 36.8652 2.83205 36.8652 4.39453Z" fill="#3A1E4F"></path>
+<path opacity="0.3" d="M4.93164 17.0898C12.2397 17.0898 18.1641 11.2311 18.1641 4.00391C18.1641 2.60738 17.9429 1.26194 17.5332 0H0V16.1508C1.52408 16.7565 3.1885 17.0898 4.93164 17.0898Z" fill="#301945"></path>
+<path d="M13.9284 13.4677C10.5271 15.869 8.54561 16.8334 4.7243 17.081C4.29619 10.3312 4.86053 8.24165 6.84834 6.58296C8.98584 4.77194 11.3762 4.32298 18.1765 4.7275L18.1736 4.74934C17.7633 7.92456 17.5324 9.71152 13.9284 13.4677Z" fill="#261539"></path>
+</g>
+<defs>
+<filter id="SvgjsFilter1129" x="0.6875" y="4.73633" width="48.625" height="48.2832" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"></feColorMatrix>
+<feOffset dy="4"></feOffset>
+<feGaussianBlur stdDeviation="2"></feGaussianBlur>
+<feComposite in2="hardAlpha" operator="out"></feComposite>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"></feColorMatrix>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_24_2"></feBlend>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_24_2" result="shape"></feBlend>
+</filter>
+<linearGradient id="SvgjsLinearGradient1128" x1="32.4463" y1="23.5352" x2="32.4463" y2="39.993" gradientUnits="userSpaceOnUse">
+<stop offset="0.307692" stop-color="#2C193E"></stop>
+<stop offset="0.519231" stop-color="#261539"></stop>
+<stop offset="1" stop-color="#251438"></stop>
+</linearGradient>
+<clipPath id="SvgjsClipPath1127">
+<rect width="50" height="50" fill="white"></rect>
+</clipPath>
+</defs>
+</svg><style>@media (prefers-color-scheme: light) { :root { filter: contrast(1) brightness(1); } }
+@media (prefers-color-scheme: dark) { :root { filter: none; } }
+</style></svg>
