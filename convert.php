@@ -10,6 +10,7 @@ function getClientIP() {
     } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
         return $_SERVER['HTTP_X_FORWARDED_FOR'];
     } else {
+        logMessage('Ошибка при проверке IP', 'WARNING', ['Default IP'=> $_SERVER['REMOTE_ADDR']]);
         return $_SERVER['REMOTE_ADDR'];
     }
 }

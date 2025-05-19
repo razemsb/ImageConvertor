@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const preview = document.getElementById('preview');
@@ -8,11 +8,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const progressBar = document.getElementById('progressBar');
     const progressBarInner = progressBar.querySelector('div');
     const historyContainer = document.getElementById('history');
-    
+
     let toolbar = document.querySelector('.toolbar');
     if (!toolbar) {
         toolbar = document.createElement('div');
-        toolbar.className = 'toolbar flex items-center p-4 bg-white shadow-md mb-4';
+        toolbar.className = 'toolbar flex items-center sticky p-4 bg-white shadow-md mb-4';
         document.body.insertBefore(toolbar, document.body.firstChild);
     }
 
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="relative h-screen w-full max-w-5xl mx-auto flex items-center justify-center p-4">
             <div class="bg-white rounded-xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden">
                 <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                    <h3 class="text-xl font-bold text-gray-800">Журнал конвертаций</h3>
+                    <h3 class="text-xl font-bold text-gray-800">Логи конвертаций</h3>
                     <button id="closeLogsModal" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times text-xl"></i>
                     </button>
@@ -66,9 +66,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const logsButton = document.createElement('button');
     logsButton.id = 'showLogsButton';
-    logsButton.className = 'logs-button px-4 py-2 rounded-lg ml-4 flex items-center';
-    logsButton.innerHTML = `<i class="fas fa-scroll mr-2"></i><span>Логи</span>`;
+    logsButton.className = `
+        log-button 
+        px-4 py-3 
+        rounded-xl 
+        ml-4 
+        flex items-center 
+        bg-gradient-to-r from-blue-500 to-blue-600
+        text-white 
+        font-medium
+        shadow-lg
+        hover:shadow-xl
+        hover:from-blue-600 hover:to-blue-700
+        transition-all
+        duration-300
+        transform
+        active:translate-y-0
+        active:scale-95
+        group
+    `;
+    logsButton.innerHTML = `
+        <i class="fas fa-scroll mr-3 text-lg group-hover:rotate-6 transition-transform duration-300"></i>
+        <span class="text-sm tracking-wide">История конвертаций</span>
+        <span class="ml-2 bg-white/20 px-2 py-1 rounded-full text-xs">
+            <span id="logsCounter">0</span>
+        </span>
+    `;
     toolbar.appendChild(logsButton);
+
+    const newLogsIndicator = document.createElement('div');
+    newLogsIndicator.className = `
+        absolute 
+        -top-1 -right-1 
+        w-3 h-3 
+        bg-red-500 
+        rounded-full 
+        animate-pulse
+        hidden
+    `;
+    logsButton.appendChild(newLogsIndicator);
 
     let conversionHistory = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
     displayHistory();
@@ -119,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    window.deleteHistoryItem = function(index) {
+    window.deleteHistoryItem = function (index) {
         conversionHistory.splice(index, 1);
         localStorage.setItem('conversionHistory', JSON.stringify(conversionHistory));
         displayHistory();
@@ -153,14 +189,18 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleFiles(e) {
         const files = [...e.target.files];
         files.forEach(file => {
-            if (file.type.startsWith('image/')) previewAndConvertFile(file);
+            if (file.type.startsWith('image/')) {
+                previewAndConvertFile(file);
+            } else {
+                console.warn(`Файл ${file.name} не является изображением и будет пропущен`);
+            }
         });
     }
 
     function previewAndConvertFile(file) {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onloadend = function() {
+        reader.onloadend = function () {
             const previewItem = document.createElement('div');
             previewItem.className = 'preview-item p-4';
             previewItem.innerHTML = `
@@ -174,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <div class="mt-3">
-                    <p class="text-sm font-medium text-gray-800">${file.name}</p>
+                    <p class="text-sm font-medium text-gray-800 truncate">${file.name}</p>
                     <p class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB</p>
                 </div>
             `;
@@ -280,8 +320,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 logEntries.push({
                     time: time.trim(),
-                    type: type.includes('ERROR') ? 'ERROR' : 
-                         type.includes('SUCCESS') ? 'SUCCESS' : 'INFO',
+                    type: type.includes('ERROR') ? 'ERROR' :
+                        type.includes('WARNING') ? 'WARNING' :
+                            type.includes('SUCCESS') ? 'SUCCESS' : 'INFO',
                     rawType: type.trim(),
                     ip: ip.trim(),
                     message: message.trim(),
@@ -298,20 +339,20 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayLogs(logs) {
         const levelFilter = document.getElementById('logLevelFilter').value;
         const searchText = document.getElementById('logSearch').value.toLowerCase();
-        
+
         const filteredLogs = logs.filter(log => {
             const typeMatch = levelFilter === 'all' || levelFilter === log.type;
-            const textMatch = log.message.toLowerCase().includes(searchText) || 
-                            log.data.toLowerCase().includes(searchText) ||
-                            log.ip.toLowerCase().includes(searchText);
-            
+            const textMatch = log.message.toLowerCase().includes(searchText) ||
+                log.data.toLowerCase().includes(searchText) ||
+                log.ip.toLowerCase().includes(searchText);
+
             return typeMatch && textMatch;
         });
-        
+
         document.getElementById('logsCount').textContent = filteredLogs.length;
         const logsContent = document.getElementById('logsContent');
         logsContent.innerHTML = '';
-        
+
         if (filteredLogs.length === 0) {
             logsContent.innerHTML = `
                 <tr>
@@ -322,22 +363,25 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             return;
         }
-        
+
         filteredLogs.forEach(log => {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50';
-            
+
             let typeClass = 'bg-blue-100 text-blue-800';
             let icon = 'fa-info-circle text-blue-500';
-            
+
             if (log.type === 'ERROR') {
                 typeClass = 'bg-red-100 text-red-800';
                 icon = 'fa-exclamation-circle text-red-500';
             } else if (log.type === 'SUCCESS') {
                 typeClass = 'bg-green-100 text-green-800';
                 icon = 'fa-check-circle text-green-500';
+            } else if (log.type === 'WARNING') {
+                typeClass = 'bg-yellow-100 text-yellow-800';
+                icon = 'fa-solid fa-triangle-exclamation text-yellow-500';
             }
-            
+
             let jsonDisplay = '';
             try {
                 const parsedData = JSON.parse(log.data);
@@ -345,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch {
                 jsonDisplay = `<div class="text-xs text-gray-500 mt-1">${log.data}</div>`;
             }
-            
+
             row.innerHTML = `
                 <td class="p-3 text-xs whitespace-nowrap">${log.time}</td>
                 <td class="p-3 whitespace-nowrap">
@@ -360,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
                 <td class="p-3 text-xs text-gray-500">${log.ip}</td>
             `;
-            
+
             logsContent.appendChild(row);
         });
     }
@@ -373,13 +417,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'text/plain; charset=utf-8'
                 }
             });
-            
+
             if (!response.ok) throw new Error(`Ошибка загрузки: ${response.status}`);
-            
+
             const logText = await response.text();
             currentLogs = parseLogs(logText);
             displayLogs(currentLogs);
-            
+
         } catch (error) {
             document.getElementById('logsContent').innerHTML = `
                 <tr>

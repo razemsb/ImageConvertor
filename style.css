@@ -103,6 +103,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
     margin-right: 1rem;
 }
 
+.sticky {
+    position: sticky;
+}
+
 .preview-info {
     flex-grow: 1;
 }
