@@ -286,10 +286,11 @@ document.addEventListener('DOMContentLoaded', function () {
             progressBarInner.style.width = '0%';
 
             const statusIndicator = previewItem.querySelector('.status-indicator');
+            console.log(error);
             statusIndicator.innerHTML = `
                 <div class="flex items-center space-x-2">
                     <i class="fas fa-exclamation-circle text-red-500"></i>
-                    <span>${error.message || 'Ошибка конвертации'}</span>
+                    <span>Ошибка конвертации</span>
                 </div>
             `;
             statusIndicator.classList.add('bg-red-50', 'text-red-600');

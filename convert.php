@@ -4,22 +4,30 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 require_once("logs/logs.php");
 
-function getClientIP() {
+function getClientIP()
+{
+    if (php_sapi_name() === 'cli') {
+        return 'CLI';
+    }
+
     if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
         return $_SERVER['HTTP_CLIENT_IP'];
     } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
         return $_SERVER['HTTP_X_FORWARDED_FOR'];
-    } else {
-        logMessage('Ошибка при проверке IP', 'WARNING', ['Default IP'=> $_SERVER['REMOTE_ADDR']]);
+    } elseif (!empty($_SERVER['REMOTE_ADDR'])) {
+        logMessage('IP не определен через прокси, взят REMOTE_ADDR', 'WARNING', ['Default IP' => $_SERVER['REMOTE_ADDR']]);
         return $_SERVER['REMOTE_ADDR'];
+    } else {
+        return 'UNKNOWN';
     }
 }
 
+
 $clientIP = getClientIP();
-logMessage('Запуск обработки изображения', 'INFO', ['request' => $_REQUEST, 'ip' => $clientIP]);
+logMessage('Запуск запроса на обработку изображения', 'INFO', ['request' => $_REQUEST, 'ip' => $clientIP]);
 
 if (!isset($_FILES['image'])) {
-    logMessage('Отсутствует файл изображения', 'ERROR', ['files' => $_FILES, 'ip' => $clientIP]);
+    logMessage('Файл изображения не найден в запросе', 'ERROR', ['FILES' => $_FILES, 'ip' => $clientIP]);
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'Файл не загружен']));
 }
@@ -28,28 +36,31 @@ $file = $_FILES['image'];
 $format = strtolower($_POST['format'] ?? 'webp');
 $quality = intval($_POST['quality'] ?? 80);
 
-logMessage('Параметры конвертации', 'INFO', [
-    'filename' => $file['name'],
-    'size' => $file['size'],
+logMessage('Получение параметров', 'INFO', [
+    'original_filename' => $file['name'] ?? 'undefined',
+    'tmp_name' => $file['tmp_name'] ?? 'undefined',
+    'mime_type' => $file['type'] ?? 'undefined',
+    'size' => $file['size'] ?? 0,
     'format' => $format,
     'quality' => $quality,
     'ip' => $clientIP
 ]);
 
 if ($file['error'] !== UPLOAD_ERR_OK) {
-    logMessage('Ошибка загрузки файла', 'ERROR', [
+    $error_text = getUploadErrorText($file['error']);
+    logMessage('Ошибка при загрузке файла', 'ERROR', [
         'error_code' => $file['error'],
-        'error_text' => getUploadErrorText($file['error']),
+        'error_text' => $error_text,
         'ip' => $clientIP
     ]);
     header('HTTP/1.1 400 Bad Request');
-    die(json_encode(['error' => 'Ошибка загрузки файла']));
+    die(json_encode(['error' => $error_text]));
 }
 
 $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
 if (!in_array($file['type'], $allowed_types)) {
-    logMessage('Неподдерживаемый тип файла', 'ERROR', [
-        'current_type' => $file['type'],
+    logMessage('Тип файла не поддерживается', 'ERROR', [
+        'uploaded_type' => $file['type'],
         'allowed_types' => $allowed_types,
         'ip' => $clientIP
     ]);
@@ -58,13 +69,13 @@ if (!in_array($file['type'], $allowed_types)) {
 }
 
 if ($format === 'webp' && !function_exists('imagewebp')) {
-    logMessage('WebP не поддерживается сервером', 'ERROR', ['ip' => $clientIP]);
+    logMessage('Функция imagewebp отсутствует (WebP не поддерживается)', 'ERROR', ['ip' => $clientIP]);
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'WebP не поддерживается на этом сервере']));
 }
 
 if ($format === 'avif' && !function_exists('imageavif')) {
-    logMessage('AVIF не поддерживается сервером', 'ERROR', ['ip' => $clientIP]);
+    logMessage('Функция imageavif отсутствует (AVIF не поддерживается)', 'ERROR', ['ip' => $clientIP]);
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'AVIF не поддерживается на этом сервере']));
 }
@@ -72,15 +83,15 @@ if ($format === 'avif' && !function_exists('imageavif')) {
 $upload_dir = 'converted/';
 if (!file_exists($upload_dir)) {
     if (!mkdir($upload_dir, 0777, true)) {
-        logMessage('Не удалось создать директорию', 'ERROR', [
+        logMessage('Не удалось создать директорию для хранения изображений', 'ERROR', [
             'directory' => $upload_dir,
             'ip' => $clientIP
         ]);
         header('HTTP/1.1 500 Internal Server Error');
-        die(json_encode(['error' => 'Ошибка сервера']));
+        die(json_encode(['error' => 'Ошибка сервера при создании директории']));
     }
-    logMessage('Директория создана', 'INFO', [
-        'path' => realpath($upload_dir),
+    logMessage('Создана новая директория для сохранения изображений', 'INFO', [
+        'directory' => $upload_dir,
         'ip' => $clientIP
     ]);
 }
@@ -90,38 +101,38 @@ try {
     switch ($file['type']) {
         case 'image/jpeg':
             $source_image = imagecreatefromjpeg($file['tmp_name']);
-            logMessage('JPEG изображение загружено', 'INFO', ['ip' => $clientIP]);
+            logMessage('Изображение JPEG успешно загружено', 'INFO', ['ip' => $clientIP]);
             break;
         case 'image/png':
             $source_image = imagecreatefrompng($file['tmp_name']);
             if ($source_image) {
                 imagealphablending($source_image, true);
                 imagesavealpha($source_image, true);
-                logMessage('PNG изображение загружено с сохранением прозрачности', 'INFO', ['ip' => $clientIP]);
+                logMessage('PNG загружен с поддержкой прозрачности', 'INFO', ['ip' => $clientIP]);
             }
             break;
         case 'image/gif':
             $source_image = imagecreatefromgif($file['tmp_name']);
             if (!$source_image) {
-                throw new Exception('Не удалось загрузить GIF изображение');
+                throw new Exception('Ошибка загрузки GIF изображения');
             }
-            logMessage('GIF изображение загружено', 'INFO', ['ip' => $clientIP]);
+            logMessage('GIF успешно загружен', 'INFO', ['ip' => $clientIP]);
             break;
     }
 
     if (!$source_image) {
-        throw new Exception('Не удалось загрузить изображение в GD');
+        throw new Exception('Не удалось создать ресурс изображения (GD вернул null)');
     }
 
     $filename = uniqid() . '.' . $format;
     $output_path = $upload_dir . $filename;
 
-    logMessage('Начало конвертации', 'INFO', [
+    logMessage('Начинаем конвертацию изображения', 'INFO', [
         'target_format' => $format,
-        'output_path' => $output_path,
+        'output_file' => $filename,
+        'full_path' => $output_path,
         'ip' => $clientIP
     ]);
-
     $success = false;
     switch ($format) {
         case 'webp':
@@ -137,19 +148,59 @@ try {
             $png_quality = round(9 - ($quality / 100 * 9));
             $success = imagepng($source_image, $output_path, $png_quality);
             break;
+        case 'gif':
+            if (!function_exists('imagegif')) {
+                throw new Exception('Функция imagegif отсутствует');
+            }
+
+            if (!is_writable(dirname($output_path))) {
+                throw new Exception("Папка не доступна для записи: " . dirname($output_path));
+            }
+
+            $fp = fopen($output_path, 'wb');
+            if (!$fp) {
+                throw new Exception("Не удалось открыть файл $output_path для записи GIF");
+            }
+
+            ob_start();
+            $success = imagegif($source_image, $fp);
+            fclose($fp);
+            ob_end_clean();
+
+            logMessage('Попытка сохранить GIF', 'DEBUG', [
+                'output_path' => $output_path,
+                'success' => $success,
+                'ip' => $clientIP
+            ]);
+            break;
         default:
-            throw new Exception('Неподдерживаемый формат конвертации');
+            throw new Exception("Неподдерживаемый формат конвертации: $format");
     }
 
     if (!$success) {
-        throw new Exception('Ошибка при конвертации изображения');
+        if (file_exists($output_path)) {
+            unlink($output_path);
+            logMessage('Удален битый или пустой файл после неудачной конвертации', 'WARNING', [
+                'format' => $format,
+                'path' => $output_path,
+                'ip' => $clientIP
+            ]);
+        }
+
+        logMessage('Ошибка при сохранении изображения', 'ERROR', [
+            'format' => $format,
+            'output_path' => $output_path,
+            'ip' => $clientIP
+        ]);
+        throw new Exception("Ошибка при записи изображения в формате $format");
     }
 
-    logMessage('Изображение успешно сконвертировано', 'SUCCESS', [
-        'original' => $file['name'],
-        'result' => $filename,
-        'format' => $format,
-        'size' => filesize($output_path),
+
+    logMessage('Успешная конвертация изображения', 'SUCCESS', [
+        'original_filename' => $file['name'],
+        'converted_filename' => $filename,
+        'converted_size' => filesize($output_path),
+        'output_path' => realpath($output_path),
         'ip' => $clientIP
     ]);
 
@@ -164,29 +215,36 @@ try {
     ]);
 
 } catch (Exception $e) {
-    logMessage('Ошибка обработки изображения: ' . $e->getMessage(), 'ERROR', [
+    if (ob_get_length()) {
+        ob_clean();
+    }
+    logMessage('Фатальная ошибка при обработке изображения', 'ERROR', [
+        'message' => $e->getMessage(),
+        'trace' => $e->getTraceAsString(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
         'format' => $format,
         'quality' => $quality,
         'ip' => $clientIP
     ]);
+    header('Content-Type: application/json');
     header('HTTP/1.1 500 Internal Server Error');
     echo json_encode(['error' => $e->getMessage()]);
-} finally {
-    if ($source_image) {
-        imagedestroy($source_image);
-    }
+    exit;
 }
 
-function getUploadErrorText($error_code) {
+
+function getUploadErrorText($error_code)
+{
     $errors = [
-        UPLOAD_ERR_INI_SIZE => 'Превышен максимальный размер файла',
-        UPLOAD_ERR_FORM_SIZE => 'Превышен MAX_FILE_SIZE в форме',
-        UPLOAD_ERR_PARTIAL => 'Файл загружен частично',
+        UPLOAD_ERR_INI_SIZE => 'Превышен максимальный размер файла в php.ini',
+        UPLOAD_ERR_FORM_SIZE => 'Превышен MAX_FILE_SIZE в HTML-форме',
+        UPLOAD_ERR_PARTIAL => 'Файл загружен только частично',
         UPLOAD_ERR_NO_FILE => 'Файл не был загружен',
-        UPLOAD_ERR_NO_TMP_DIR => 'Отсутствует временная папка',
-        UPLOAD_ERR_CANT_WRITE => 'Не удалось записать файл на диск',
-        UPLOAD_ERR_EXTENSION => 'Загрузка остановлена расширением'
+        UPLOAD_ERR_NO_TMP_DIR => 'Отсутствует временная папка на сервере',
+        UPLOAD_ERR_CANT_WRITE => 'Ошибка записи файла на диск',
+        UPLOAD_ERR_EXTENSION => 'Загрузка прервана расширением PHP'
     ];
-    return $errors[$error_code] ?? 'Неизвестная ошибка';
+    return $errors[$error_code] ?? 'Неизвестная ошибка загрузки';
 }
 ?>
