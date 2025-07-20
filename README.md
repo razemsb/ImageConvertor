@@ -49,7 +49,7 @@ git clone https://github.com/razemsb/image_to_webp_converter.git
 image_to_webp_converter/
 ├── index.html         # Основной файл приложения
 ├── converted/         # Директория для сохранения конвертированных файлов
-├── convert.php        # Основной скрипт
+├── api/               # Основной скрипт
 ├── script.js          # Логика
 ├── style.css          # Доп. Стили
 ├── img/               # Favicon

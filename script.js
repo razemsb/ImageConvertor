@@ -92,7 +92,36 @@ document.addEventListener('DOMContentLoaded', function () {
             <span id="logsCounter">0</span>
         </span>
     `;
+
+    const testButton = document.createElement('a');
+    testButton.id = 'openTests';
+    testButton.href = 'test/index.html';
+    testButton.className = `
+        px-4 py-3 
+        rounded-xl 
+        ml-4 
+        flex items-center 
+        bg-gradient-to-r from-blue-500 to-blue-600
+        text-white 
+        font-medium
+        shadow-lg
+        hover:shadow-xl
+        hover:from-blue-600 hover:to-blue-700
+        transition-all
+        duration-300
+        transform
+        active:translate-y-0
+        active:scale-95
+        group
+    `;
+
+    testButton.innerHTML = `
+        <i class="fa-solid fa-code mr-3 text-lg group-hover:rotate-6 transition-transform duration-300"></i>
+        <span class="text-sm tracking-wide">Тесты</span>
+    `;    
+
     toolbar.appendChild(logsButton);
+    toolbar.appendChild(testButton);
 
     const newLogsIndicator = document.createElement('div');
     newLogsIndicator.className = `
@@ -246,12 +275,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 300);
 
         try {
-            const response = await fetch('convert.php', { method: 'POST', body: formData });
+            const response = await fetch('http://localhost/convertor_www/api/v1/convert.php', { method: 'POST', body: formData });
             clearInterval(loadingInterval);
             progressBarInner.style.width = '100%';
 
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Неизвестная ошибка сервера');
+
+            // Исправленный путь для скачивания (добавляем convertor_www)
+            const downloadPath = `http://localhost/convertor_www/converted/${data.filename}`;
+            console.log(downloadPath);
 
             conversionHistory.unshift({
                 originalName: data.originalName,
@@ -259,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 format: data.format,
                 quality: data.quality,
                 timestamp: data.timestamp,
-                path: data.path
+                path: downloadPath  // Теперь путь всегда правильный
             });
 
             if (conversionHistory.length > 50) conversionHistory = conversionHistory.slice(0, 50);
@@ -270,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="flex items-center space-x-2">
                     <i class="fas fa-check-circle text-green-500"></i>
                     <span>Конвертировано</span>
-                    <a href="${data.path}" target="_blank" class="text-blue-500 hover:text-blue-600">
+                    <a href="${downloadPath}" target="_blank" class="text-blue-500 hover:text-blue-600">
                         <i class="fas fa-download"></i>
                     </a>
                 </div>
@@ -304,32 +337,72 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function parseLogs(logText) {
         const logEntries = [];
-        const lines = logText.split('\n').filter(line => line.trim() !== '');
+        const operations = logText.split('=======================\n\n').filter(op => op.trim() !== '');
 
-        for (const line of lines) {
+        for (const operation of operations) {
             try {
-                const parts = line.split('|').map(part => part.trim());
-                if (parts.length < 2) continue;
+                const lines = operation.split('\n').filter(line => line.trim() !== '');
+                if (lines.length < 4) continue;
 
-                const jsonData = parts[1];
-                const prefixPart = parts[0];
+                const time = lines[1].replace('Время начала: ', '').trim();
+                const ip = lines[2].replace('IP адрес: ', '').trim();
+                const type = lines[3].replace('Тип операции: ', '').trim();
+                const message = lines[4].replace('Сообщение: ', '').trim();
 
-                const prefixMatch = prefixPart.match(/\[([^\]]+)\]\[([^\]]+)\]\[IP:([^\]]+)\](.*)/);
-                if (!prefixMatch) continue;
+                const details = {};
+                let inDetails = false;
+                let currentKey = null;
 
-                const [_, time, type, ip, message] = prefixMatch;
+                // Парсим детали операции
+                for (let i = 5; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line === 'Детали операции:') {
+                        inDetails = true;
+                        continue;
+                    }
+
+                    if (inDetails) {
+                        if (line.startsWith('    ') && !line.startsWith('        ')) {
+                            const [key, value] = line.replace('    ', '').split(': ');
+                            if (key && value) {
+                                currentKey = key;
+                                try {
+                                    details[key] = JSON.parse(value);
+                                } catch {
+                                    details[key] = value;
+                                }
+                            }
+                        } else if (line.startsWith('        ') && currentKey) {
+                            const [subKey, subValue] = line.replace('        ', '').split(': ');
+                            if (subKey && subValue) {
+                                if (!details[currentKey]) {
+                                    details[currentKey] = {};
+                                }
+                                try {
+                                    details[currentKey][subKey] = JSON.parse(subValue);
+                                } catch {
+                                    details[currentKey][subKey] = subValue;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 logEntries.push({
-                    time: time.trim(),
-                    type: type.includes('ERROR') ? 'ERROR' :
-                        type.includes('WARNING') ? 'WARNING' :
-                            type.includes('SUCCESS') ? 'SUCCESS' : 'INFO',
-                    rawType: type.trim(),
-                    ip: ip.trim(),
-                    message: message.trim(),
-                    data: jsonData
+                    time: time,
+                    type:
+                        type.includes('ERROR') ? 'ERROR' :
+                            type.includes('WARNING') ? 'WARNING' :
+                                type.includes('THE-END') ? 'THE-END' :
+                                    type.includes('START') ? 'START' :
+                                        type.includes('SUCCESS') ? 'SUCCESS' : 'INFO',
+                    rawType: type,
+                    ip: ip,
+                    message: message,
+                    data: details
                 });
             } catch (e) {
+                console.error('Ошибка при разборе записи лога:', e);
                 continue;
             }
         }
@@ -344,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const filteredLogs = logs.filter(log => {
             const typeMatch = levelFilter === 'all' || levelFilter === log.type;
             const textMatch = log.message.toLowerCase().includes(searchText) ||
-                log.data.toLowerCase().includes(searchText) ||
+                JSON.stringify(log.data).toLowerCase().includes(searchText) ||
                 log.ip.toLowerCase().includes(searchText);
 
             return typeMatch && textMatch;
@@ -375,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (log.type === 'ERROR') {
                 typeClass = 'bg-red-100 text-red-800';
                 icon = 'fa-exclamation-circle text-red-500';
-            } else if (log.type === 'SUCCESS') {
+            } else if (log.type === 'SUCCESS' || log.type === 'START' || log.type === 'THE-END') {
                 typeClass = 'bg-green-100 text-green-800';
                 icon = 'fa-check-circle text-green-500';
             } else if (log.type === 'WARNING') {
@@ -383,13 +456,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 icon = 'fa-solid fa-triangle-exclamation text-yellow-500';
             }
 
-            let jsonDisplay = '';
-            try {
-                const parsedData = JSON.parse(log.data);
-                jsonDisplay = `<pre class="text-xs text-gray-600 mt-1 max-h-20 overflow-auto">${JSON.stringify(parsedData, null, 2)}</pre>`;
-            } catch {
-                jsonDisplay = `<div class="text-xs text-gray-500 mt-1">${log.data}</div>`;
-            }
+            const detailsHtml = Object.entries(log.data)
+                .map(([key, value]) => {
+                    if (typeof value === 'object' && value !== null) {
+                        return `
+                            <div class="text-xs text-gray-600 mb-2">
+                                <div class="font-medium mb-1">${key}:</div>
+                                ${Object.entries(value)
+                                .map(([subKey, subValue]) => `
+                                        <div class="ml-2">
+                                            <span class="font-medium">${subKey}:</span> 
+                                            ${typeof subValue === 'object' ?
+                                        `<pre class="mt-1 max-h-20 overflow-auto">${JSON.stringify(subValue, null, 2)}</pre>` :
+                                        subValue}
+                                        </div>
+                                    `).join('')}
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="text-xs text-gray-600">
+                            <span class="font-medium">${key}:</span> ${value}
+                        </div>
+                    `;
+                }).join('');
 
             row.innerHTML = `
                 <td class="p-3 text-xs whitespace-nowrap">${log.time}</td>
@@ -400,8 +490,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     </span>
                 </td>
                 <td class="p-3">
-                    <div class="text-sm">${log.message}</div>
-                    ${jsonDisplay}
+                    <div class="text-sm font-medium mb-2">${log.message}</div>
+                    ${detailsHtml}
                 </td>
                 <td class="p-3 text-xs text-gray-500">${log.ip}</td>
             `;

@@ -1,0 +1,4 @@
+Options -Indexes
+RewriteEngine On
+RewriteCond %{HTTP_REFERER} !^http://localhost/ [NC]
+RewriteRule \.(jpg|jpeg|png|gif|webp)$ - [NC,F,L]
