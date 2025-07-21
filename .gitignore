@@ -1,0 +1,9 @@
+*.log
+converted/*.jpg
+converted/*.jpeg
+converted/*.png
+converted/*.gif
+converted/*.bmp
+converted/*.webp
+converted/*.svg
+!converted/.htaccess
