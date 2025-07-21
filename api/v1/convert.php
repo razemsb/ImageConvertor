@@ -134,7 +134,7 @@ try {
     $filename = uniqid() . '.' . $format;
     $output_path = $upload_dir . $filename;
 
-    logMessage('Начинало конвертации изображения', 'INFO', [
+    logMessage('Начало конвертации изображения', 'INFO', [
         'target_format' => $format,
         'output_file' => $filename,
         'full_path' => $output_path,
@@ -210,12 +210,11 @@ try {
         'output_path' => realpath($output_path),
         'ip' => $clientIP
     ]);
-    logMessage('Завершение работы скрипта', 'THE-END', ['script' => 'no error']);
-
     echo json_encode([
         'success' => true,
         'filename' => $filename,
         'path' => $output_path,
+        'url' => $output_path,
         'originalName' => $file['name'],
         'format' => $format,
         'quality' => $quality,

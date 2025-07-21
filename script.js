@@ -12,9 +12,36 @@ document.addEventListener('DOMContentLoaded', function () {
     let toolbar = document.querySelector('.toolbar');
     if (!toolbar) {
         toolbar = document.createElement('div');
-        toolbar.className = 'toolbar flex items-center sticky p-4 bg-white shadow-md mb-4';
+        toolbar.className = 'toolbar flex items-center justify-between sticky p-4 bg-white shadow-md mb-4';
         document.body.insertBefore(toolbar, document.body.firstChild);
     }
+
+    const logoContainer = document.createElement('div');
+    logoContainer.className = 'flex items-center';
+
+    const logo = document.createElement('div');
+    logo.className = 'w-10 h-10 rounded-lg flex items-center justify-center text-white text-xl font-bold mr-3';
+    
+    // Создаем элемент img
+    const img = document.createElement('img');
+    img.src = 'img/favicon/favicon-96x96.png'; 
+    img.alt = 'Enigma'; 
+    img.className = 'w-50 h-50'; 
+    img.draggable = false;
+    
+    logo.appendChild(img);
+    logoContainer.appendChild(logo);
+
+    const siteName = document.createElement('div');
+    siteName.className = 'text-xl font-bold text-gray-800';
+    siteName.textContent = 'E-Convertor';
+    logoContainer.appendChild(siteName);
+
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'flex items-center';
+
+    toolbar.appendChild(logoContainer);
+    toolbar.appendChild(buttonsContainer);
 
     const logsModal = document.createElement('div');
     logsModal.id = 'logsModal';
@@ -118,10 +145,10 @@ document.addEventListener('DOMContentLoaded', function () {
     testButton.innerHTML = `
         <i class="fa-solid fa-code mr-3 text-lg group-hover:rotate-6 transition-transform duration-300"></i>
         <span class="text-sm tracking-wide">Тесты</span>
-    `;    
+    `;
 
-    toolbar.appendChild(logsButton);
-    toolbar.appendChild(testButton);
+    buttonsContainer.appendChild(logsButton);
+    buttonsContainer.appendChild(testButton);
 
     const newLogsIndicator = document.createElement('div');
     newLogsIndicator.className = `
@@ -135,7 +162,28 @@ document.addEventListener('DOMContentLoaded', function () {
     `;
     logsButton.appendChild(newLogsIndicator);
 
-    let conversionHistory = JSON.parse(localStorage.getItem('conversionHistory') || '[]');
+    let conversionHistory = [];
+
+    try {
+        const storedHistory = localStorage.getItem('conversionHistory');
+        if (storedHistory) {
+            if (storedHistory.trim().startsWith('[') || storedHistory.trim().startsWith('{')) {
+                conversionHistory = JSON.parse(storedHistory);
+                if (!Array.isArray(conversionHistory)) {
+                    console.warn('История не является массивом, сбрасываем');
+                    conversionHistory = [];
+                    localStorage.removeItem('conversionHistory');
+                }
+            } else {
+                console.warn('Некорректный формат истории, сбрасываем');
+                localStorage.removeItem('conversionHistory');
+            }
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки истории:', e);
+        localStorage.removeItem('conversionHistory');
+        conversionHistory = [];
+    }
     displayHistory();
 
     function displayHistory() {
@@ -161,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
             historyItem.innerHTML = `
                 <div class="flex items-center space-x-4">
                     <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-file-image text-blue-500 text-xl"></i>
+                        <img src="./converted/${item.convertedName}" width="100%" height="100%">
                     </div>
                     <div>
                         <h3 class="font-medium text-gray-800">${item.originalName}</h3>
@@ -275,16 +323,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 300);
 
         try {
-            const response = await fetch('http://localhost/convertor_www/api/v1/convert.php', { method: 'POST', body: formData });
+            const response = await fetch('./api/v1/convert.php', { method: 'POST', body: formData });
             clearInterval(loadingInterval);
             progressBarInner.style.width = '100%';
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Неизвестная ошибка сервера');
 
-            // Исправленный путь для скачивания (добавляем convertor_www)
-            const downloadPath = `http://localhost/convertor_www/converted/${data.filename}`;
-            console.log(downloadPath);
+            if (!data.filename) {
+                throw new Error('Сервер не вернул имя файла');
+            }
+
+            data.format = data.format || formatSelect.value;
+            data.quality = data.quality || qualitySlider.value;
+            data.timestamp = data.timestamp || Math.floor(Date.now() / 1000);
+
+            const downloadPath = `./converted/${data.filename}`;
 
             conversionHistory.unshift({
                 originalName: data.originalName,
@@ -292,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 format: data.format,
                 quality: data.quality,
                 timestamp: data.timestamp,
-                path: downloadPath  // Теперь путь всегда правильный
+                path: downloadPath
             });
 
             if (conversionHistory.length > 50) conversionHistory = conversionHistory.slice(0, 50);
