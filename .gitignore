@@ -1,9 +1,10 @@
-*.log
+logs/*.log
 converted/*.jpg
 converted/*.jpeg
 converted/*.png
 converted/*.gif
 converted/*.bmp
 converted/*.webp
+converted/*.avif
 converted/*.svg
 !converted/.htaccess
