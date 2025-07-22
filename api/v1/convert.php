@@ -1,7 +1,8 @@
 <?php
 header('Content-Type: application/json');
-require_once("../../config/config.php");
 require_once("../../logs/logs.php");
+require_once("../../logs/db_logger.php");
+require_once("../../config/db.php");
 
 logMessage('Запуск скрипта, проверка компонентов...', 'START', ['GD' => 'Проверка...']);
 
@@ -76,12 +77,28 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
         'error_text' => $error_text,
         'ip' => $clientIP
     ]);
+    ConversionLogger::logError(
+        $clientIP,
+        $file['name'] ?? '',
+        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+        $format,
+        $quality,
+        $e->getMessage()
+    );
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => $error_text]));
 }
 
 $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
 if (!in_array($file['type'], $allowed_types)) {
+    ConversionLogger::logError(
+        $clientIP,
+        $file['name'] ?? '',
+        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+        $format,
+        $quality,
+        $e->getMessage()
+    );
     logMessage('Тип файла не поддерживается', 'ERROR', [
         'uploaded_type' => $file['type'],
         'allowed_types' => $allowed_types,
@@ -93,12 +110,28 @@ if (!in_array($file['type'], $allowed_types)) {
 
 if ($format === 'webp' && !function_exists('imagewebp')) {
     logMessage('Функция imagewebp отсутствует (WebP не поддерживается)', 'ERROR', ['ip' => $clientIP]);
+    ConversionLogger::logError(
+        $clientIP,
+        $file['name'] ?? '',
+        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+        $format,
+        $quality,
+        $e->getMessage()
+    );
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'WebP не поддерживается на этом сервере']));
 }
 
 if ($format === 'avif' && !function_exists('imageavif')) {
     logMessage('Функция imageavif отсутствует (AVIF не поддерживается)', 'ERROR', ['ip' => $clientIP]);
+    ConversionLogger::logError(
+        $clientIP,
+        $file['name'] ?? '',
+        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+        $format,
+        $quality,
+        $e->getMessage()
+    );
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'AVIF не поддерживается на этом сервере']));
 }
@@ -210,6 +243,16 @@ try {
         'output_path' => realpath($output_path),
         'ip' => $clientIP
     ]);
+    ConversionLogger::logSuccess(
+        $clientIP,
+        $file['name'],
+        $filename,
+        pathinfo($file['name'], PATHINFO_EXTENSION),
+        $format,
+        $file['size'],
+        filesize($output_path),
+        $quality
+    );
     echo json_encode([
         'success' => true,
         'filename' => $filename,
@@ -234,6 +277,14 @@ try {
         'quality' => $quality,
         'ip' => $clientIP
     ]);
+    ConversionLogger::logError(
+        $clientIP,
+        $file['name'] ?? '',
+        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+        $format,
+        $quality,
+        $e->getMessage()
+    );  
     header('Content-Type: application/json');
     header('HTTP/1.1 500 Internal Server Error');
     echo json_encode(['error' => $e->getMessage()]);

@@ -1,6 +1,5 @@
 <?php
 header('Content-Type: application/json');
-require_once("../config/config.php");
 // require_once("../logs/logs.php");
 
 //logMessage('Запуск скрипта, проверка компонентов...', 'START', ['GD' => 'Проверка...']);

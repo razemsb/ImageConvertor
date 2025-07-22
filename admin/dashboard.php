@@ -1,0 +1,517 @@
+<?php
+session_start();
+if (!isset($_SESSION['admin_loggin']) || $_SESSION['admin_loggin'] !== true) {
+    header('Location: index.php');
+    exit();
+}
+
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'convertor');
+
+class DB
+{
+    private static $connection = null;
+
+    public static function connect()
+    {
+        if (self::$connection === null) {
+            try {
+                self::$connection = new PDO(
+                    'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+                    DB_USER,
+                    DB_PASS,
+                    [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                    ]
+                );
+            } catch (PDOException $e) {
+                error_log("DB Connection failed: " . $e->getMessage());
+                die("Ошибка подключения к базе данных");
+            }
+        }
+        return self::$connection;
+    }
+}
+
+function getConversionStats()
+{
+    $db = DB::connect();
+    $stats = [
+        'total_conversions' => 0,
+        'today_conversions' => 0,
+        'error_rate' => 0,
+        'popular_formats' => [],
+        'active_users' => []
+    ];
+
+    try {
+        // Общее количество конвертаций
+        $stmt = $db->query("SELECT COUNT(*) as count FROM conversions");
+        $stats['total_conversions'] = $stmt->fetchColumn();
+
+        // Конвертации за сегодня
+        $stmt = $db->query("SELECT COUNT(*) as count FROM conversions WHERE DATE(created_at) = CURDATE()");
+        $stats['today_conversions'] = $stmt->fetchColumn();
+
+        // Процент ошибок
+        $stmt = $db->query("SELECT 
+            (COUNT(CASE WHEN status = 'error' THEN 1 END) / COUNT(*)) * 100 as rate 
+            FROM conversions");
+        $stats['error_rate'] = round($stmt->fetchColumn(), 1);
+
+        $stmt = $db->query("
+            SELECT new_format as format, COUNT(*) as count 
+            FROM conversions 
+            WHERE status = 'success' AND new_format IS NOT NULL
+            GROUP BY new_format 
+            ORDER BY count DESC 
+            LIMIT 4
+        ");
+        $stats['popular_formats'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Активные пользователи
+        $stmt = $db->query("
+            SELECT ip, COUNT(*) as count 
+            FROM conversions 
+            GROUP BY ip 
+            ORDER BY count DESC 
+            LIMIT 5
+        ");
+        $stats['active_users'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+        error_log("Error getting stats: " . $e->getMessage());
+    }
+
+    return $stats;
+}
+
+function getConversionLogs($page = 1, $perPage = 25)
+{
+    $db = DB::connect();
+    $logs = [];
+    $total = 0;
+
+    try {
+        // Подсчет общего количества записей
+        $stmt = $db->query("SELECT COUNT(*) as count FROM conversions");
+        $total = $stmt->fetchColumn();
+
+        // Вычисление смещения для пагинации
+        $offset = ($page - 1) * $perPage;
+
+        // Получение записей с учетом пагинации
+        $stmt = $db->prepare("
+            SELECT 
+                id, ip, original_name, new_name, 
+                original_format, new_format, 
+                original_size, new_size, quality, 
+                status, error_message, created_at
+            FROM conversions
+            ORDER BY created_at DESC
+            LIMIT :limit OFFSET :offset
+        ");
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+        error_log("Error getting logs: " . $e->getMessage());
+    }
+
+    return ['logs' => $logs, 'total' => $total];
+}
+
+/**
+ * Форматирование размера файла
+ */
+function formatSize($bytes)
+{
+    if ($bytes == 0)
+        return '0 Bytes';
+    $units = ['Bytes', 'KB', 'MB', 'GB'];
+    $i = floor(log($bytes, 1024));
+    return round($bytes / pow(1024, $i), 2) . ' ' . $units[$i];
+}
+
+// Получаем параметры пагинации из GET-запроса
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$perPage = isset($_GET['perPage']) && in_array($_GET['perPage'], [25, 50, 100]) ? (int)$_GET['perPage'] : 25;
+
+// Получаем данные
+$stats = getConversionStats();
+$logData = getConversionLogs($page, $perPage);
+$logs = $logData['logs'];
+$totalLogs = $logData['total'];
+$totalPages = ceil($totalLogs / $perPage);
+?>
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель | Конвертер</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <script src="../assets/vendors/tailwindcss/script.js"></script>
+    <link rel="stylesheet" href="../assets/vendors/font-awesome/css/all.min.js">
+    <script src="../assets/vendors/font-awesome/js/all.min.js" crossorigin="anonymous"></script>
+    <script src="../assets/vendors/chartjs/chart.js"></script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        .error-details {
+            display: none;
+            position: absolute;
+            background: #1f2937;
+            border: 1px solid #374151;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            max-width: 400px;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <!-- Шапка -->
+    <header class="bg-gray-800 shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-400">
+                <img src="../assets/img/favicon/favicon-96x96.png" class="logotype" alt="Logotype">
+            </h1>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-400 hidden md:inline">
+                    <i class="fas fa-user-shield mr-1"></i>
+                    <?= htmlspecialchars($_SESSION['admin_username'] ?? 'Администратор') ?>
+                </span>
+                <a href="logout.php" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Выход
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Статистика -->
+        <section class="mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-blue-400 border-b border-gray-700 pb-2">
+                <i class="fas fa-chart-bar mr-2"></i>Статистика использования
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- Карточка общих конвертаций -->
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-blue-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-sm">Всего конвертаций</p>
+                            <p class="text-2xl font-bold"><?= $stats['total_conversions'] ?></p>
+                        </div>
+                        <div class="bg-blue-500/20 p-3 rounded-full">
+                            <i class="fas fa-exchange-alt text-blue-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Карточка конвертаций за сегодня -->
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-green-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-sm">Сегодня</p>
+                            <p class="text-2xl font-bold"><?= $stats['today_conversions'] ?></p>
+                        </div>
+                        <div class="bg-green-500/20 p-3 rounded-full">
+                            <i class="fas fa-calendar-day text-green-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Карточка ошибок -->
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-yellow-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-sm">Ошибок</p>
+                            <p class="text-2xl font-bold"><?= $stats['error_rate'] ?>%</p>
+                        </div>
+                        <div class="bg-yellow-500/20 p-3 rounded-full">
+                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Карточка активных пользователей -->
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-purple-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-sm">Активных IP</p>
+                            <p class="text-2xl font-bold"><?= count($stats['active_users']) ?></p>
+                        </div>
+                        <div class="bg-purple-500/20 p-3 rounded-full">
+                            <i class="fas fa-users text-purple-400"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg">
+                    <h3 class="font-medium mb-3 text-gray-300">
+                        <i class="fas fa-file-alt mr-2"></i>Популярные форматы
+                    </h3>
+                    <div class="h-64">
+                        <?php if (empty($stats['popular_formats'])): ?>
+                            <p class="text-gray-400 text-center py-10">Нет данных о популярных форматах</p>
+                        <?php else: ?>
+                            <canvas id="formatChart"></canvas>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Список активных пользователей -->
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg">
+                    <h3 class="font-medium mb-3 text-gray-300">
+                        <i class="fas fa-user-clock mr-2"></i>Самые активные пользователи
+                    </h3>
+                    <div class="space-y-3">
+                        <?php foreach ($stats['active_users'] as $user): ?>
+                            <div class="flex justify-between items-center bg-gray-700/50 p-3 rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="bg-blue-500/20 p-2 rounded-full mr-3">
+                                        <i class="fas fa-laptop-code text-blue-400 text-sm"></i>
+                                    </div>
+                                    <span class="font-mono"><?= htmlspecialchars($user['ip']) ?></span>
+                                </div>
+                                <span class="bg-gray-600 px-2 py-1 rounded text-sm">
+                                    <?= $user['count'] ?> операций
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Логи конвертаций -->
+        <section>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-blue-400 border-b border-gray-700 pb-2">
+                    <i class="fas fa-clipboard-list mr-2"></i>История конвертаций
+                </h2>
+                <div class="flex space-x-3">
+                    <select id="perPageSelect" class="bg-gray-700 text-gray-100 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="25" <?= $perPage == 25 ? 'selected' : '' ?>>25 записей</option>
+                        <option value="50" <?= $perPage == 50 ? 'selected' : '' ?>>50 записей</option>
+                        <option value="100" <?= $perPage == 100 ? 'selected' : '' ?>>100 записей</option>
+                    </select>
+                    <button onclick="window.location.reload()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Обновить
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-900">
+                            <tr class="text-left">
+                                <th class="p-3 font-semibold text-gray-300">Дата и время</th>
+                                <th class="p-3 font-semibold text-gray-300">IP адрес</th>
+                                <th class="p-3 font-semibold text-gray-300">Статус</th>
+                                <th class="p-3 font-semibold text-gray-300">Исходный файл</th>
+                                <th class="p-3 font-semibold text-gray-300">Форматы</th>
+                                <th class="p-3 font-semibold text-gray-300">Размеры</th>
+                                <th class="p-3 font-semibold text-gray-300">Детали</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700">
+                            <?php foreach ($logs as $log): ?>
+                                <tr class="hover:bg-gray-700/50 transition-colors">
+                                    <td class="p-3 text-gray-400 whitespace-nowrap">
+                                        <?= date('d.m.Y H:i:s', strtotime($log['created_at'])) ?>
+                                    </td>
+                                    <td class="p-3 font-mono text-gray-400">
+                                        <?= htmlspecialchars($log['ip']) ?>
+                                    </td>
+                                    <td class="p-3">
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium 
+                                            <?= $log['status'] === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' ?>">
+                                            <?= $log['status'] === 'success' ? 'Успех' : 'Ошибка' ?>
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-gray-400">
+                                        <?= htmlspecialchars($log['original_name']) ?>
+                                    </td>
+                                    <td class="p-3">
+                                        <?= htmlspecialchars(strtoupper($log['original_format'])) ?>
+                                        →
+                                        <?= $log['new_format'] ? htmlspecialchars(strtoupper($log['new_format'])) : '-' ?>
+                                    </td>
+                                    <td class="p-3">
+                                        <?= $log['original_size'] ? formatSize($log['original_size']) : '-' ?>
+                                        →
+                                        <?= $log['new_size'] ? formatSize($log['new_size']) : '-' ?>
+                                    </td>
+                                    <td class="p-3">
+                                        <?php if ($log['status'] === 'error' && !empty($log['error_message'])): ?>
+                                            <button onclick="showErrorDetails('error-details-<?= $log['id'] ?>')"
+                                                class="text-gray-400 hover:text-blue-400 p-1">
+                                                <i class="fas fa-info-circle"></i>
+                                            </button>
+                                            <div id="error-details-<?= $log['id'] ?>" class="error-details">
+                                                <?= htmlspecialchars($log['error_message']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-3 text-sm text-gray-400 bg-gray-900 border-t border-gray-700">
+                    <div class="flex justify-between items-center">
+                        <span>Всего записей: <span class="font-bold text-white"><?= $totalLogs ?></span></span>
+                        <div class="flex items-center space-x-2">
+                            <span>Страница <?= $page ?> из <?= $totalPages ?></span>
+                            <button id="prevPage" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors <?= $page <= 1 ? 'opacity-50 cursor-not-allowed' : '' ?>" <?= $page <= 1 ? 'disabled' : '' ?>>
+                                <i class="fas fa-chevron-left"></i> Предыдущая
+                            </button>
+                            <button id="nextPage" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors <?= $page >= $totalPages ? 'opacity-50 cursor-not-allowed' : '' ?>" <?= $page >= $totalPages ? 'disabled' : '' ?>>
+                                Следующая <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+
+function showErrorDetails(id) {
+    // Скрываем все открытые детали
+    document.querySelectorAll('.error-details').forEach(el => {
+        el.style.display = 'none';
+    });
+
+    // Показываем нужные детали
+    const details = document.getElementById(id);
+    if (details) {
+        details.style.display = 'block';
+
+        // Позиционируем относительно кнопки
+        const btn = details.previousElementSibling;
+        const rect = btn.getBoundingClientRect();
+        details.style.top = `${rect.bottom + window.scrollY}px`;
+        details.style.left = `${rect.left + window.scrollX}px`;
+
+        // Закрытие при клике вне элемента
+        setTimeout(() => {
+            const clickHandler = (e) => {
+                if (!details.contains(e.target)) {
+                    details.style.display = 'none';
+                    document.removeEventListener('click', clickHandler);
+                }
+            };
+            document.addEventListener('click', clickHandler);
+        }, 10);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const canvas = document.getElementById('formatChart');
+    if (!canvas) {
+        console.error('Canvas element for formatChart not found');
+        return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error('Failed to get canvas context');
+        return;
+    }
+
+    // Получаем данные из PHP
+    const formatLabels = <?php echo json_encode(array_column($stats['popular_formats'], 'format')); ?>;
+    const formatCounts = <?php echo json_encode(array_column($stats['popular_formats'], 'count')); ?>;
+
+    // Проверяем наличие данных
+    if (!formatLabels || !formatCounts || formatLabels.length === 0 || formatCounts.length === 0) {
+        canvas.style.display = 'none';
+        const noDataMsg = document.createElement('p');
+        noDataMsg.textContent = 'Нет данных о популярных форматах';
+        noDataMsg.className = 'text-gray-400 text-center py-10';
+        canvas.parentNode.appendChild(noDataMsg);
+        return;
+    }
+
+    // Создаем график
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: formatLabels,
+            datasets: [{
+                data: formatCounts,
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.7)',  // Blue
+                    'rgba(16, 185, 129, 0.7)',  // Green
+                    'rgba(245, 158, 11, 0.7)',  // Amber
+                    'rgba(139, 92, 246, 0.7)'   // Purple
+                ],
+                borderColor: [
+                    'rgba(59, 130, 246, 1)',
+                    'rgba(16, 185, 129, 1)',
+                    'rgba(245, 158, 11, 1)',
+                    'rgba(139, 92, 246, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        color: '#d1d5db',
+                        font: {
+                            family: "'Inter', sans-serif"
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total ? Math.round((value / total) * 100) : 0;
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '65%'
+        }
+    });
+});
+</script>
+</body>
+</html>

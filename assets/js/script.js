@@ -24,9 +24,10 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // Создаем элемент img
     const img = document.createElement('img');
-    img.src = 'img/favicon/favicon-96x96.png'; 
+    img.src = './assets/img/favicon/favicon-96x96.png'; 
     img.alt = 'Enigma'; 
     img.className = 'w-50 h-50'; 
+    img.style.borderRadius = '6px';
     img.draggable = false;
     
     logo.appendChild(img);
@@ -43,124 +44,124 @@ document.addEventListener('DOMContentLoaded', function () {
     toolbar.appendChild(logoContainer);
     toolbar.appendChild(buttonsContainer);
 
-    const logsModal = document.createElement('div');
-    logsModal.id = 'logsModal';
-    logsModal.className = 'fixed inset-0 z-50 hidden';
-    logsModal.innerHTML = `
-        <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"></div>
-        <div class="relative h-screen w-full max-w-5xl mx-auto flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden">
-                <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                    <h3 class="text-xl font-bold text-gray-800">Логи конвертаций</h3>
-                    <button id="closeLogsModal" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                <div class="p-3 border-b border-gray-200 flex flex-wrap gap-2 bg-gray-50">
-                    <select id="logLevelFilter" class="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm">
-                        <option value="all">Все уровни</option>
-                        <option value="INFO">Инфо</option>
-                        <option value="WARNING">Предупреждения</option>
-                        <option value="ERROR">Ошибки</option>
-                        <option value="SUCCESS">Успех</option>
-                    </select>
-                    <input type="text" id="logSearch" placeholder="Поиск по логам..." 
-                           class="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm flex-grow min-w-[200px]">
-                    <button id="refreshLogs" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm whitespace-nowrap">
-                        <i class="fas fa-sync-alt mr-1"></i>Обновить
-                    </button>
-                </div>
-                <div class="overflow-y-auto flex-grow bg-white">
-                    <table class="w-full text-sm">
-                        <thead class="sticky top-0 bg-gray-100">
-                            <tr>
-                                <th class="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Время</th>
-                                <th class="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Уровень</th>
-                                <th class="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Сообщение</th>
-                                <th class="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">IP</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logsContent" class="divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-                <div class="p-2 border-t border-gray-200 text-xs text-gray-500 bg-gray-50">
-                    Всего записей: <span id="logsCount" class="font-medium">0</span>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(logsModal);
+    // const logsModal = document.createElement('div');
+    // logsModal.id = 'logsModal';
+    // logsModal.className = 'fixed inset-0 z-50 hidden';
+    // logsModal.innerHTML = `
+    //     <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"></div>
+    //     <div class="relative h-screen w-full max-w-5xl mx-auto flex items-center justify-center p-4">
+    //         <div class="bg-white rounded-xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+    //             <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+    //                 <h3 class="text-xl font-bold text-gray-800">Логи конвертаций</h3>
+    //                 <button id="closeLogsModal" class="text-gray-500 hover:text-gray-700">
+    //                     <i class="fas fa-times text-xl"></i>
+    //                 </button>
+    //             </div>
+    //             <div class="p-3 border-b border-gray-200 flex flex-wrap gap-2 bg-gray-50">
+    //                 <select id="logLevelFilter" class="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm">
+    //                     <option value="all">Все уровни</option>
+    //                     <option value="INFO">Инфо</option>
+    //                     <option value="WARNING">Предупреждения</option>
+    //                     <option value="ERROR">Ошибки</option>
+    //                     <option value="SUCCESS">Успех</option>
+    //                 </select>
+    //                 <input type="text" id="logSearch" placeholder="Поиск по логам..." 
+    //                        class="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm flex-grow min-w-[200px]">
+    //                 <button id="refreshLogs" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm whitespace-nowrap">
+    //                     <i class="fas fa-sync-alt mr-1"></i>Обновить
+    //                 </button>
+    //             </div>
+    //             <div class="overflow-y-auto flex-grow bg-white">
+    //                 <table class="w-full text-sm">
+    //                     <thead class="sticky top-0 bg-gray-100">
+    //                         <tr>
+    //                             <th class="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Время</th>
+    //                             <th class="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Уровень</th>
+    //                             <th class="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Сообщение</th>
+    //                             <th class="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">IP</th>
+    //                         </tr>
+    //                     </thead>
+    //                     <tbody id="logsContent" class="divide-y divide-gray-200"></tbody>
+    //                 </table>
+    //             </div>
+    //             <div class="p-2 border-t border-gray-200 text-xs text-gray-500 bg-gray-50">
+    //                 Всего записей: <span id="logsCount" class="font-medium">0</span>
+    //             </div>
+    //         </div>
+    //     </div>
+    // `;
+    // document.body.appendChild(logsModal);
 
-    const logsButton = document.createElement('button');
-    logsButton.id = 'showLogsButton';
-    logsButton.className = `
-        log-button 
-        px-4 py-3 
-        rounded-xl 
-        ml-4 
-        flex items-center 
-        bg-gradient-to-r from-blue-500 to-blue-600
-        text-white 
-        font-medium
-        shadow-lg
-        hover:shadow-xl
-        hover:from-blue-600 hover:to-blue-700
-        transition-all
-        duration-300
-        transform
-        active:translate-y-0
-        active:scale-95
-        group
-    `;
-    logsButton.innerHTML = `
-        <i class="fas fa-scroll mr-3 text-lg group-hover:rotate-6 transition-transform duration-300"></i>
-        <span class="text-sm tracking-wide">История конвертаций</span>
-        <span class="ml-2 bg-white/20 px-2 py-1 rounded-full text-xs">
-            <span id="logsCounter">0</span>
-        </span>
-    `;
+    // const logsButton = document.createElement('button');
+    // logsButton.id = 'showLogsButton';
+    // logsButton.className = `
+    //     log-button 
+    //     px-4 py-3 
+    //     rounded-xl 
+    //     ml-4 
+    //     flex items-center 
+    //     bg-gradient-to-r from-blue-500 to-blue-600
+    //     text-white 
+    //     font-medium
+    //     shadow-lg
+    //     hover:shadow-xl
+    //     hover:from-blue-600 hover:to-blue-700
+    //     transition-all
+    //     duration-300
+    //     transform
+    //     active:translate-y-0
+    //     active:scale-95
+    //     group
+    // `;
+    // logsButton.innerHTML = `
+    //     <i class="fas fa-scroll mr-3 text-lg group-hover:rotate-6 transition-transform duration-300"></i>
+    //     <span class="text-sm tracking-wide">История конвертаций</span>
+    //     <span class="ml-2 bg-white/20 px-2 py-1 rounded-full text-xs">
+    //         <span id="logsCounter">0</span>
+    //     </span>
+    // `;
 
-    const testButton = document.createElement('a');
-    testButton.id = 'openTests';
-    testButton.href = 'test/index.html';
-    testButton.className = `
-        px-4 py-3 
-        rounded-xl 
-        ml-4 
-        flex items-center 
-        bg-gradient-to-r from-blue-500 to-blue-600
-        text-white 
-        font-medium
-        shadow-lg
-        hover:shadow-xl
-        hover:from-blue-600 hover:to-blue-700
-        transition-all
-        duration-300
-        transform
-        active:translate-y-0
-        active:scale-95
-        group
-    `;
+    // const testButton = document.createElement('a');
+    // testButton.id = 'openTests';
+    // testButton.href = 'test/index.html';
+    // testButton.className = `
+    //     px-4 py-3 
+    //     rounded-xl 
+    //     ml-4 
+    //     flex items-center 
+    //     bg-gradient-to-r from-blue-500 to-blue-600
+    //     text-white 
+    //     font-medium
+    //     shadow-lg
+    //     hover:shadow-xl
+    //     hover:from-blue-600 hover:to-blue-700
+    //     transition-all
+    //     duration-300
+    //     transform
+    //     active:translate-y-0
+    //     active:scale-95
+    //     group
+    // `;
 
-    testButton.innerHTML = `
-        <i class="fa-solid fa-code mr-3 text-lg group-hover:rotate-6 transition-transform duration-300"></i>
-        <span class="text-sm tracking-wide">Тесты</span>
-    `;
+    // testButton.innerHTML = `
+    //     <i class="fa-solid fa-code mr-3 text-lg group-hover:rotate-6 transition-transform duration-300"></i>
+    //     <span class="text-sm tracking-wide">Тесты</span>
+    // `;
 
-    buttonsContainer.appendChild(logsButton);
-    buttonsContainer.appendChild(testButton);
+    //buttonsContainer.appendChild(logsButton);
+    // buttonsContainer.appendChild(testButton);
 
-    const newLogsIndicator = document.createElement('div');
-    newLogsIndicator.className = `
-        absolute 
-        -top-1 -right-1 
-        w-3 h-3 
-        bg-red-500 
-        rounded-full 
-        animate-pulse
-        hidden
-    `;
-    logsButton.appendChild(newLogsIndicator);
+    // const newLogsIndicator = document.createElement('div');
+    // newLogsIndicator.className = `
+    //     absolute 
+    //     -top-1 -right-1 
+    //     w-3 h-3 
+    //     bg-red-500 
+    //     rounded-full 
+    //     animate-pulse
+    //     hidden
+    // `;
+    // logsButton.appendChild(newLogsIndicator);
 
     let conversionHistory = [];
 
@@ -582,34 +583,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let currentLogs = [];
 
-    document.getElementById('showLogsButton').addEventListener('click', () => {
-        logsModal.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-        loadLogs();
-    });
+    // document.getElementById('showLogsButton').addEventListener('click', () => {
+    //     logsModal.classList.remove('hidden');
+    //     document.body.classList.add('overflow-hidden');
+    //     loadLogs();
+    // });
 
-    document.getElementById('closeLogsModal').addEventListener('click', () => {
-        logsModal.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-    });
+    // document.getElementById('closeLogsModal').addEventListener('click', () => {
+    //     logsModal.classList.add('hidden');
+    //     document.body.classList.remove('overflow-hidden');
+    // });
 
-    logsModal.addEventListener('click', (e) => {
-        if (e.target === logsModal) {
-            logsModal.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-        }
-    });
+    // logsModal.addEventListener('click', (e) => {
+    //     if (e.target === logsModal) {
+    //         logsModal.classList.add('hidden');
+    //         document.body.classList.remove('overflow-hidden');
+    //     }
+    // });
 
-    document.getElementById('logLevelFilter').addEventListener('change', () => displayLogs(currentLogs));
-    document.getElementById('logSearch').addEventListener('input', () => displayLogs(currentLogs));
-    document.getElementById('refreshLogs').addEventListener('click', loadLogs);
+    // document.getElementById('logLevelFilter').addEventListener('change', () => displayLogs(currentLogs));
+    // document.getElementById('logSearch').addEventListener('input', () => displayLogs(currentLogs));
+    // document.getElementById('refreshLogs').addEventListener('click', loadLogs);
 
-    qualitySlider.addEventListener('input', (e) => {
-        qualityValue.textContent = `${e.target.value}%`;
-    });
+    // qualitySlider.addEventListener('input', (e) => {
+    //     qualityValue.textContent = `${e.target.value}%`;
+    // });
 
-    dropZone.addEventListener('mouseenter', () => dropZone.style.transform = 'translateY(-2px)');
-    dropZone.addEventListener('mouseleave', () => dropZone.style.transform = 'translateY(0)');
+    // dropZone.addEventListener('mouseenter', () => dropZone.style.transform = 'translateY(-2px)');
+    // dropZone.addEventListener('mouseleave', () => dropZone.style.transform = 'translateY(0)');
 
     displayHistory();
 });
