@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const preview = document.getElementById('preview');
-    const formatSelect = document.getElementById('format');
     const qualitySlider = document.getElementById('quality');
     const qualityValue = document.querySelector('.quality-value');
     const progressBar = document.getElementById('progressBar');
@@ -13,6 +12,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const chevron = document.getElementById('accountChevron');
     const LogoutBtn = document.getElementById('LogoutBtn');
 
+    function getSelectedFormat() {
+        const selectedFormat = document.querySelector('input[name="format"]:checked');
+        return selectedFormat ? selectedFormat.value : 'webp';
+    }
 
     let toolbar = document.querySelector('.toolbar');
 
@@ -22,20 +25,22 @@ document.addEventListener('DOMContentLoaded', function () {
         document.body.insertBefore(toolbar, document.body.firstChild);
     }
 
-    LogoutBtn.addEventListener('click', function () {
-        fetch('./config/logout.php', {
-            method: 'POST',
-            credentials: 'include'
-        })
-            .then(res => {
-                if (res.ok) {
-                    window.location.reload();
-                } else {
-                    alert('Ошибка при выходе из аккаунта');
-                }
+    if (LogoutBtn) {
+        LogoutBtn.addEventListener('click', function () {
+            fetch('./config/logout.php', {
+                method: 'POST',
+                credentials: 'include'
             })
-            .catch(() => alert('Ошибка сети'));
-    })
+                .then(res => {
+                    if (res.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Ошибка при выходе из аккаунта');
+                    }
+                })
+                .catch(() => alert('Ошибка сети'));
+        });
+    }
 
     if (btn && dropdown) {
         btn.addEventListener('click', () => {
@@ -177,20 +182,27 @@ document.addEventListener('DOMContentLoaded', function () {
         reader.readAsDataURL(file);
         reader.onloadend = function () {
             const previewItem = document.createElement('div');
-            previewItem.className = 'preview-item p-4';
+            previewItem.className = 'preview-item p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300';
             previewItem.innerHTML = `
-                <div class="relative">
+                <div class="relative group">
                     <img src="${reader.result}" class="w-full h-48 object-cover rounded-lg" alt="${file.name}">
-                    <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-300 rounded-lg flex items-center justify-center">
-                        <div class="status-indicator text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-spinner fa-spin mr-2"></i>
-                            Конвертация...
+                    <div class="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center">
+                        <div class="status-indicator bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg flex items-center">
+                            <div class="loading-spinner mr-2">
+                                <div class="spinner-circle"></div>
+                            </div>
+                            <span class="text-sm font-medium text-gray-700">Обработка изображения...</span>
                         </div>
                     </div>
                 </div>
-                <div class="mt-3">
-                    <p class="text-sm font-medium text-gray-800 truncate">${file.name}</p>
-                    <p class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB</p>
+                <div class="mt-3 flex justify-between items-start">
+                    <div class="truncate">
+                        <p class="text-sm font-medium text-gray-800 truncate" title="${file.name}">${file.name}</p>
+                        <p class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <div class="file-type-badge px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-xs">
+                        ${file.type.split('/')[1]?.toUpperCase() || 'IMG'}
+                    </div>
                 </div>
             `;
 
@@ -209,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function convertFile(file, previewItem) {
         const formData = new FormData();
         formData.append('image', file);
-        formData.append('format', formatSelect.value);
+        formData.append('format', getSelectedFormat());
         formData.append('quality', qualitySlider.value);
 
         progressBar.classList.remove('hidden');
@@ -255,18 +267,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const statusIndicator = previewItem.querySelector('.status-indicator');
             statusIndicator.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-check-circle text-green-500"></i>
-                    <span>Конвертировано</span>
-                    <a href="${downloadPath}" target="_blank" class="text-blue-500 hover:text-blue-600">
+                <div class="flex items-center space-x-2 animate-pop-in">
+                    <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-check text-green-500 text-xs"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">Готово!</span>
+                    <a href="${downloadPath}" target="_blank" 
+                       class="ml-2 w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white text-xs transition-colors"
+                       title="Скачать">
                         <i class="fas fa-download"></i>
                     </a>
                 </div>
             `;
-            statusIndicator.classList.add('bg-green-500');
+            statusIndicator.classList.remove('bg-white/90');
+            statusIndicator.classList.add('bg-green-50', 'border', 'border-green-100');
 
-            previewItem.style.transform = 'scale(0.95)';
-            setTimeout(() => previewItem.style.transform = 'scale(1)', 200);
+            // Добавляем информацию о конвертации
+            const fileInfo = previewItem.querySelector('.file-type-badge');
+            fileInfo.innerHTML = `
+                <span class="text-green-600 font-medium">${data.format.toUpperCase()}</span>
+                <span class="text-gray-400 mx-1">•</span>
+                <span>${data.quality}%</span>
+            `;
+            fileInfo.classList.remove('bg-gray-100', 'text-gray-600');
+            fileInfo.classList.add('bg-green-50', 'text-green-700');
+
+            previewItem.querySelector('img').style.transform = 'scale(0.97)';
+            setTimeout(() => {
+                previewItem.querySelector('img').style.transform = 'scale(1)';
+                previewItem.querySelector('img').style.transition = 'transform 0.3s ease';
+            }, 200);
+
             displayHistory();
 
         } catch (error) {
@@ -274,14 +305,26 @@ document.addEventListener('DOMContentLoaded', function () {
             progressBarInner.style.width = '0%';
 
             const statusIndicator = previewItem.querySelector('.status-indicator');
-            console.log(error);
             statusIndicator.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-exclamation-circle text-red-500"></i>
-                    <span>Ошибка конвертации</span>
+                <div class="flex items-center space-x-2 animate-pop-in">
+                    <div class="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-times text-red-500 text-xs"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">Ошибка конвертации</span>
+                    <button onclick="retryConversion(this)" 
+                            class="ml-2 w-6 h-6 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-xs transition-colors"
+                            title="Повторить">
+                        <i class="fas fa-redo"></i>
+                    </button>
                 </div>
             `;
-            statusIndicator.classList.add('bg-red-50', 'text-red-600');
+            statusIndicator.classList.remove('bg-white/90');
+            statusIndicator.classList.add('bg-red-50', 'border', 'border-red-100');
+
+            const fileInfo = previewItem.querySelector('.file-type-badge');
+            fileInfo.innerHTML = `<span class="text-red-600">Ошибка</span>`;
+            fileInfo.classList.remove('bg-gray-100', 'text-gray-600');
+            fileInfo.classList.add('bg-red-50', 'text-red-700');
 
             previewItem.style.animation = 'shake 0.5s';
             setTimeout(() => previewItem.style.animation = '', 500);

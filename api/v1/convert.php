@@ -1,5 +1,7 @@
 <?php
+if (ob_get_length()) ob_clean();
 header('Content-Type: application/json');
+session_start();
 require_once("../../logs/logs.php");
 require_once("../../logs/db_logger.php");
 require_once("../../config/db.php");
@@ -9,6 +11,15 @@ logMessage('Запуск скрипта, проверка компонентов
 if (!extension_loaded('gd') || !function_exists('gd_info')) {
     logMessage('Ошибка: модуль GD неактивен', 'ERROR', ['GD Module ' => 'Недоступен', 'Включите его в php.ini и перезагрузите Apache сервер.']);
     die(json_encode(['error' => 'GD не поддерживается на этом сервере']));
+}
+
+$user_id = null;
+
+if (isset($_SESSION['user']['id'])) {
+    $user_id = $_SESSION['user']['id'];
+    logMessage('ID пользователя получен', 'INFO', ['ID' => $user_id]);
+} else {
+    logMessage('Пользователь не авторизован', 'INFO');
 }
 
 $upload_dir = "../../converted/";
@@ -79,6 +90,7 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
     ]);
     ConversionLogger::logError(
         $clientIP,
+        $user_id,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
@@ -93,6 +105,7 @@ $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
 if (!in_array($file['type'], $allowed_types)) {
     ConversionLogger::logError(
         $clientIP,
+        $user_id,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
@@ -112,6 +125,7 @@ if ($format === 'webp' && !function_exists('imagewebp')) {
     logMessage('Функция imagewebp отсутствует (WebP не поддерживается)', 'ERROR', ['ip' => $clientIP]);
     ConversionLogger::logError(
         $clientIP,
+        $user_id,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
@@ -126,6 +140,7 @@ if ($format === 'avif' && !function_exists('imageavif')) {
     logMessage('Функция imageavif отсутствует (AVIF не поддерживается)', 'ERROR', ['ip' => $clientIP]);
     ConversionLogger::logError(
         $clientIP,
+        $user_id,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
@@ -245,6 +260,7 @@ try {
     ]);
     ConversionLogger::logSuccess(
         $clientIP,
+        $user_id,
         $file['name'],
         $filename,
         pathinfo($file['name'], PATHINFO_EXTENSION),
@@ -279,6 +295,7 @@ try {
     ]);
     ConversionLogger::logError(
         $clientIP,
+        $user_id,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,

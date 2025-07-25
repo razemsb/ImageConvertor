@@ -63,6 +63,7 @@ function getConversionStats()
             FROM conversions");
         $stats['error_rate'] = round($stmt->fetchColumn(), 1);
 
+        // Популярные форматы
         $stmt = $db->query("
             SELECT new_format as format, COUNT(*) as count 
             FROM conversions 
@@ -73,12 +74,26 @@ function getConversionStats()
         ");
         $stats['popular_formats'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Активные пользователи
+        // Активные пользователи (по вашей структуре)
         $stmt = $db->query("
-            SELECT ip, COUNT(*) as count 
-            FROM conversions 
-            GROUP BY ip 
-            ORDER BY count DESC 
+            SELECT 
+                u.id,
+                u.username,
+                u.is_admin as role,
+                u.avatar,
+                COUNT(c.id) as conversions_count,
+                (
+                    SELECT ip 
+                    FROM conversions 
+                    WHERE user_id = u.id 
+                    ORDER BY created_at DESC 
+                    LIMIT 1
+                ) as last_ip
+            FROM users u
+            LEFT JOIN conversions c ON c.user_id = u.id
+            WHERE c.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+            GROUP BY u.id
+            ORDER BY conversions_count DESC
             LIMIT 5
         ");
         $stats['active_users'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -140,11 +155,9 @@ function formatSize($bytes)
     return round($bytes / pow(1024, $i), 2) . ' ' . $units[$i];
 }
 
-// Получаем параметры пагинации из GET-запроса
-$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
-$perPage = isset($_GET['perPage']) && in_array($_GET['perPage'], [25, 50, 100]) ? (int)$_GET['perPage'] : 25;
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int) $_GET['page'] : 1;
+$perPage = isset($_GET['perPage']) && in_array($_GET['perPage'], [25, 50, 100]) ? (int) $_GET['perPage'] : 25;
 
-// Получаем данные
 $stats = getConversionStats();
 $logData = getConversionLogs($page, $perPage);
 $logs = $logData['logs'];
@@ -153,6 +166,7 @@ $totalPages = ceil($totalLogs / $perPage);
 ?>
 <!DOCTYPE html>
 <html lang="ru" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -162,7 +176,7 @@ $totalPages = ceil($totalLogs / $perPage);
     <link rel="shortcut icon" href="../assets/img/favicon/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="../assets/img/favicon/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="MyWebSite" />
-    <link rel="manifest" href="../assets/img/favicon/site.webmanifest"/>
+    <link rel="manifest" href="../assets/img/favicon/site.webmanifest" />
     <link rel="stylesheet" href="../assets/css/style.css">
     <script src="../assets/vendors/tailwindcss/script.js"></script>
     <link rel="stylesheet" href="../assets/vendors/font-awesome/css/all.min.js">
@@ -172,16 +186,20 @@ $totalPages = ceil($totalLogs / $perPage);
         ::-webkit-scrollbar {
             width: 8px;
         }
+
         ::-webkit-scrollbar-track {
             background: #1f2937;
         }
+
         ::-webkit-scrollbar-thumb {
             background: #4b5563;
             border-radius: 4px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
             background: #6b7280;
         }
+
         .error-details {
             display: none;
             position: absolute;
@@ -195,6 +213,7 @@ $totalPages = ceil($totalLogs / $perPage);
         }
     </style>
 </head>
+
 <body class="bg-gray-900 text-gray-100 min-h-screen">
     <!-- Шапка -->
     <header class="bg-gray-800 shadow-lg">
@@ -249,14 +268,14 @@ $totalPages = ceil($totalLogs / $perPage);
                 </div>
 
                 <!-- Карточка ошибок -->
-                <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-yellow-500">
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-red-500">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-gray-400 text-sm">Ошибок</p>
                             <p class="text-2xl font-bold"><?= $stats['error_rate'] ?>%</p>
                         </div>
-                        <div class="bg-yellow-500/20 p-3 rounded-full">
-                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                        <div class="bg-red-500/20 p-3 rounded-full">
+                            <i class="fas fa-exclamation-triangle text-red-400"></i>
                         </div>
                     </div>
                 </div>
@@ -298,13 +317,34 @@ $totalPages = ceil($totalLogs / $perPage);
                         <?php foreach ($stats['active_users'] as $user): ?>
                             <div class="flex justify-between items-center bg-gray-700/50 p-3 rounded-lg">
                                 <div class="flex items-center">
-                                    <div class="bg-blue-500/20 p-2 rounded-full mr-3">
-                                        <i class="fas fa-laptop-code text-blue-400 text-sm"></i>
+                                    <!-- Фиксированный размер аватарки с выравниванием -->
+                                    <div class="bg-blue-500/20 rounded-full mr-3 flex items-center justify-center w-10 h-10">
+                                        <img src="../assets/img/other/<?= htmlspecialchars($user['avatar']) ?>"
+                                            alt="<?= htmlspecialchars($user['username']) ?>"
+                                            class="w-full h-full" style="object-fit: cover !important; border-radius: 50%;">
                                     </div>
-                                    <span class="font-mono"><?= htmlspecialchars($user['ip']) ?></span>
+                                    <div>
+                                        <div class="font-medium">
+                                            <?= htmlspecialchars($user['username']) ?>
+                                            <?php if ($user['last_ip']): ?>
+                                                <span class="text-xs font-normal text-gray-400 ml-2">
+                                                    (<?= htmlspecialchars($user['last_ip']) ?>)
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="text-xs text-gray-400">
+                                            <?= $user['conversions_count'] ?> конвертаций |
+                                            <span class="capitalize <?=
+                                                $user['role'] === 'admin' ? 'text-purple-400' :
+                                                ($user['role'] === 'moderator' ? 'text-blue-400' : 'text-gray-400')
+                                                ?>">
+                                                <?= htmlspecialchars($user['role']) ?>
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <span class="bg-gray-600 px-2 py-1 rounded text-sm">
-                                    <?= $user['count'] ?> операций
+                                    <?= $user['conversions_count'] ?>
                                 </span>
                             </div>
                         <?php endforeach; ?>
@@ -320,12 +360,14 @@ $totalPages = ceil($totalLogs / $perPage);
                     <i class="fas fa-clipboard-list mr-2"></i>История конвертаций
                 </h2>
                 <div class="flex space-x-3">
-                    <select id="perPageSelect" class="bg-gray-700 text-gray-100 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="perPageSelect"
+                        class="bg-gray-700 text-gray-100 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="25" <?= $perPage == 25 ? 'selected' : '' ?>>25 записей</option>
                         <option value="50" <?= $perPage == 50 ? 'selected' : '' ?>>50 записей</option>
                         <option value="100" <?= $perPage == 100 ? 'selected' : '' ?>>100 записей</option>
                     </select>
-                    <button onclick="window.location.reload()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors">
+                    <button onclick="window.location.reload()"
+                        class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors">
                         <i class="fas fa-sync-alt mr-2"></i>Обновить
                     </button>
                 </div>
@@ -355,7 +397,8 @@ $totalPages = ceil($totalLogs / $perPage);
                                         <?= htmlspecialchars($log['ip']) ?>
                                     </td>
                                     <td class="p-3">
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium 
+                                        <span
+                                            class="px-2 py-1 rounded-full text-xs font-medium 
                                             <?= $log['status'] === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' ?>">
                                             <?= $log['status'] === 'success' ? 'Успех' : 'Ошибка' ?>
                                         </span>
@@ -395,10 +438,14 @@ $totalPages = ceil($totalLogs / $perPage);
                         <span>Всего записей: <span class="font-bold text-white"><?= $totalLogs ?></span></span>
                         <div class="flex items-center space-x-2">
                             <span>Страница <?= $page ?> из <?= $totalPages ?></span>
-                            <button id="prevPage" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors <?= $page <= 1 ? 'opacity-50 cursor-not-allowed' : '' ?>" <?= $page <= 1 ? 'disabled' : '' ?>>
+                            <button id="prevPage"
+                                class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors <?= $page <= 1 ? 'opacity-50 cursor-not-allowed' : '' ?>"
+                                <?= $page <= 1 ? 'disabled' : '' ?>>
                                 <i class="fas fa-chevron-left"></i> Предыдущая
                             </button>
-                            <button id="nextPage" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors <?= $page >= $totalPages ? 'opacity-50 cursor-not-allowed' : '' ?>" <?= $page >= $totalPages ? 'disabled' : '' ?>>
+                            <button id="nextPage"
+                                class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors <?= $page >= $totalPages ? 'opacity-50 cursor-not-allowed' : '' ?>"
+                                <?= $page >= $totalPages ? 'disabled' : '' ?>>
                                 Следующая <i class="fas fa-chevron-right"></i>
                             </button>
                         </div>
@@ -410,114 +457,115 @@ $totalPages = ceil($totalLogs / $perPage);
 
     <script>
 
-function showErrorDetails(id) {
-    // Скрываем все открытые детали
-    document.querySelectorAll('.error-details').forEach(el => {
-        el.style.display = 'none';
-    });
+        function showErrorDetails(id) {
+            // Скрываем все открытые детали
+            document.querySelectorAll('.error-details').forEach(el => {
+                el.style.display = 'none';
+            });
 
-    // Показываем нужные детали
-    const details = document.getElementById(id);
-    if (details) {
-        details.style.display = 'block';
+            // Показываем нужные детали
+            const details = document.getElementById(id);
+            if (details) {
+                details.style.display = 'block';
 
-        // Позиционируем относительно кнопки
-        const btn = details.previousElementSibling;
-        const rect = btn.getBoundingClientRect();
-        details.style.top = `${rect.bottom + window.scrollY}px`;
-        details.style.left = `${rect.left + window.scrollX}px`;
+                // Позиционируем относительно кнопки
+                const btn = details.previousElementSibling;
+                const rect = btn.getBoundingClientRect();
+                details.style.top = `${rect.bottom + window.scrollY}px`;
+                details.style.left = `${rect.left + window.scrollX}px`;
 
-        // Закрытие при клике вне элемента
-        setTimeout(() => {
-            const clickHandler = (e) => {
-                if (!details.contains(e.target)) {
-                    details.style.display = 'none';
-                    document.removeEventListener('click', clickHandler);
-                }
-            };
-            document.addEventListener('click', clickHandler);
-        }, 10);
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    const canvas = document.getElementById('formatChart');
-    if (!canvas) {
-        console.error('Canvas element for formatChart not found');
-        return;
-    }
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        console.error('Failed to get canvas context');
-        return;
-    }
-
-    // Получаем данные из PHP
-    const formatLabels = <?php echo json_encode(array_column($stats['popular_formats'], 'format')); ?>;
-    const formatCounts = <?php echo json_encode(array_column($stats['popular_formats'], 'count')); ?>;
-
-    // Проверяем наличие данных
-    if (!formatLabels || !formatCounts || formatLabels.length === 0 || formatCounts.length === 0) {
-        canvas.style.display = 'none';
-        const noDataMsg = document.createElement('p');
-        noDataMsg.textContent = 'Нет данных о популярных форматах';
-        noDataMsg.className = 'text-gray-400 text-center py-10';
-        canvas.parentNode.appendChild(noDataMsg);
-        return;
-    }
-
-    // Создаем график
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: formatLabels,
-            datasets: [{
-                data: formatCounts,
-                backgroundColor: [
-                    'rgba(59, 130, 246, 0.7)',  // Blue
-                    'rgba(16, 185, 129, 0.7)',  // Green
-                    'rgba(245, 158, 11, 0.7)',  // Amber
-                    'rgba(139, 92, 246, 0.7)'   // Purple
-                ],
-                borderColor: [
-                    'rgba(59, 130, 246, 1)',
-                    'rgba(16, 185, 129, 1)',
-                    'rgba(245, 158, 11, 1)',
-                    'rgba(139, 92, 246, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        color: '#d1d5db',
-                        font: {
-                            family: "'Inter', sans-serif"
+                // Закрытие при клике вне элемента
+                setTimeout(() => {
+                    const clickHandler = (e) => {
+                        if (!details.contains(e.target)) {
+                            details.style.display = 'none';
+                            document.removeEventListener('click', clickHandler);
                         }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const label = context.label || '';
-                            const value = context.raw || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total ? Math.round((value / total) * 100) : 0;
-                            return `${label}: ${value} (${percentage}%)`;
-                        }
-                    }
-                }
-            },
-            cutout: '65%'
+                    };
+                    document.addEventListener('click', clickHandler);
+                }, 10);
+            }
         }
-    });
-});
-</script>
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const canvas = document.getElementById('formatChart');
+            if (!canvas) {
+                console.error('Canvas element for formatChart not found');
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Failed to get canvas context');
+                return;
+            }
+
+            // Получаем данные из PHP
+            const formatLabels = <?php echo json_encode(array_column($stats['popular_formats'], 'format')); ?>;
+            const formatCounts = <?php echo json_encode(array_column($stats['popular_formats'], 'count')); ?>;
+
+            // Проверяем наличие данных
+            if (!formatLabels || !formatCounts || formatLabels.length === 0 || formatCounts.length === 0) {
+                canvas.style.display = 'none';
+                const noDataMsg = document.createElement('p');
+                noDataMsg.textContent = 'Нет данных о популярных форматах';
+                noDataMsg.className = 'text-gray-400 text-center py-10';
+                canvas.parentNode.appendChild(noDataMsg);
+                return;
+            }
+
+            // Создаем график
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: formatLabels,
+                    datasets: [{
+                        data: formatCounts,
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)',  // Blue
+                            'rgba(16, 185, 129, 0.7)',  // Green
+                            'rgba(245, 158, 11, 0.7)',  // Amber
+                            'rgba(139, 92, 246, 0.7)'   // Purple
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(139, 92, 246, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#d1d5db',
+                                font: {
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        });
+    </script>
 </body>
+
 </html>

@@ -17,131 +17,78 @@ $user = $isAuth && !empty($_SESSION['user']) ? $_SESSION['user'] : null;
     <link rel="manifest" href="assets/img/favicon/site.webmanifest" />
     <script src="assets/vendors/tailwindcss/script.js"></script>
     <link rel="stylesheet" href="assets/vendors/font-awesome/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        .drop-zone {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border: 2px dashed #94a3b8;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(8px);
-        }
-
-        .drop-zone:hover,
-        .drop-zone.dragover {
-            border-color: #2563eb;
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            height: 8px;
-            background: #e2e8f0;
-            border-radius: 4px;
-            outline: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #2563eb;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
-            transition: all 0.2s ease;
-        }
-
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.1);
-        }
-
-        .preview-item {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        .preview-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-
-        .gradient-text {
-            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .history-item {
-            transition: all 0.3s ease;
-        }
-
-        .history-item:hover {
-            transform: translateX(5px);
-        }
     </style>
 </head>
-<div class="toolbar flex items-center sticky top-0 z-50 p-4 bg-white shadow-md mb-4" id="toolbar">
-    <div class="flex items-center">
-        <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xl font-bold mr-3">
-            <img src="./assets/img/favicon/favicon-96x96.png" alt="EnigmaLogo" class="w-50 h-50" style="border-radius: 6px;" draggable="false">
-        </div>
-        <div class="text-xl font-bold text-gray-800">
-            E-Convertor
-        </div>
-    </div>
-    <div class="relative ms-auto" id="accountMenu">
-    <?php if ($isAuth && $user): ?>
-            <button id="accountButton"
-                class="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1 hover:bg-blue-50 transition">
-                <img src="./assets/img/other/<?= htmlspecialchars($_SESSION['user']['avatar']) ?>" alt="Аватар"
-                    class="w-10 h-10 rounded-full object-cover shadow-md">
-                <span class="font-semibold text-gray-700"><?= htmlspecialchars($user['username'] ?? 'Пользователь') ?></span>
-                <i class="fas fa-chevron-down text-gray-500 transition-transform duration-300" id="accountChevron"></i>
-            </button>
-            <div id="accountDropdown"
-                class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 opacity-0 pointer-events-none transform scale-95 origin-top-right transition-all duration-300">
-                <div class="p-4 space-y-3">
-                    <?php if(isset($_SESSION['user']['is_admin']) && $_SESSION['user']['is_admin'] === 'admin'): ?>
-                    <a href="admin/index.php"
-                        class="flex items-center space-x-3 hover:bg-red-50 rounded-lg px-3 py-2 text-red-600 transition">
-                        <i class="fas fa-gears"></i>
-                        <span>Админ-Панель</span>
-                    </a>
-                    <?php endif; ?>
-                    <a href=""
-                        class="flex items-center space-x-3 hover:bg-blue-50 rounded-lg px-3 py-2 transition">
-                        <i class="fas fa-user text-blue-500"></i>
-                        <span>Профиль</span>
-                    </a>
-                    <a href=""
-                        class="flex items-center space-x-3 hover:bg-blue-50 rounded-lg px-3 py-2 transition">
-                        <i class="fas fa-cog text-blue-500"></i>
-                        <span>Настройки</span>
-                    </a>
-                    <button id="LogoutBtn" class="flex items-center space-x-3 hover:bg-red-50 rounded-lg px-3 py-2 text-red-600 transition">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Выйти</span>
-                    </button>
-                </div>
-            </div>
-    <?php else: ?>
-        <a href="auth.php" class="px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-semibold">
-            Войти
-        </a>
-    <?php endif; ?>
-    </div>
-</div>
-
 <body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
+    <div class="toolbar flex items-center sticky top-0 z-50 p-3 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 mb-4"
+        id="toolbar">
+        <div class="flex items-center">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white text-xl font-bold mr-3">
+                <img src="./assets/img/favicon/favicon-96x96.png" style="border-radius: 6px;" alt="EnigmaLogo"
+                    class="w-10 h-10" draggable="false">
+            </div>
+            <div class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                E-Convertor
+            </div>
+        </div>
+        <div class="relative ms-auto" id="accountMenu">
+            <?php if ($isAuth && $user): ?>
+                <button id="accountButton"
+                    class="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded-full p-1 pr-3 hover:bg-gray-50/80 transition-all duration-200 group">
+                    <div class="relative">
+                        <img src="./assets/img/other/<?= htmlspecialchars($_SESSION['user']['avatar']) ?>" alt="Аватар"
+                            class="w-9 h-9 rounded-full object-cover shadow-md ring-2 ring-white">
+                        <span
+                            class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                    </div>
+                    <span class="font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
+                        <?= htmlspecialchars($user['username'] ?? 'Пользователь') ?>
+                    </span>
+                    <i class="fas fa-chevron-down text-gray-400 group-hover:text-blue-500 transition-all duration-200 transform group-hover:translate-y-0.5"
+                        id="accountChevron"></i>
+                </button>
+                <div id="accountDropdown"
+                    class="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur-lg rounded-xl shadow-xl ring-1 ring-gray-200/50 opacity-0 pointer-events-none transform scale-95 origin-top-right transition-all duration-200">
+                    <div class="p-2 space-y-1">
+                        <?php if (isset($_SESSION['user']['is_admin']) && $_SESSION['user']['is_admin'] === 'admin'): ?>
+                            <a href="admin/index.php"
+                                class="flex items-center space-x-3 hover:bg-blue-50/50 rounded-lg px-3 py-2.5 transition-all text-gray-700 hover:text-blue-600">
+                                <i class="fas fa-gears text-blue-500 w-5 text-center"></i>
+                                <span class="text-sm font-medium">Админ-Панель</span>
+                                <span class="ml-auto px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">Admin</span>
+                            </a>
+                        <?php endif; ?>
+                        <a href="./<?= htmlspecialchars($user['username']) ?>"
+                            class="flex items-center space-x-3 hover:bg-blue-50/50 rounded-lg px-3 py-2.5 transition-all text-gray-700 hover:text-blue-600">
+                            <i class="fas fa-user text-blue-500 w-5 text-center"></i>
+                            <span class="text-sm font-medium">Профиль</span>
+                        </a>
+                        <div class="border-t border-gray-100 my-1"></div>
+                        <button id="LogoutBtn"
+                            class="w-full flex items-center space-x-3 hover:bg-red-50/50 rounded-lg px-3 py-2.5 transition-all text-red-600 hover:text-red-700">
+                            <i class="fas fa-sign-out-alt w-5 text-center"></i>
+                            <span class="text-sm font-medium">Выйти</span>
+                        </button>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="flex items-center space-x-3">
+                    <a href="auth.php?action=register"
+                        class="px-4 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                        Регистрация
+                    </a>
+                    <a href="auth.php"
+                        class="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm hover:shadow-md font-medium flex items-center">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        Войти
+                    </a>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
     <div class="container mx-auto px-4 py-12">
         <div class="max-w-4xl mx-auto">
             <div class="glass-effect rounded-3xl shadow-2xl overflow-hidden">
@@ -165,26 +112,71 @@ $user = $isAuth && !empty($_SESSION['user']) ? $_SESSION['user'] : null;
                     <div class="mt-12 space-y-8">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="glass-effect p-8 rounded-2xl">
-                                <label for="format" class="block text-lg font-medium text-gray-800 mb-4">
+                                <label class="block text-lg font-medium text-gray-800 mb-4">
                                     <i class="fas fa-file-image mr-3 text-blue-500"></i>
                                     Формат выходного файла
                                 </label>
-                                <select id="format" name="format"
-                                    class="w-full rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white text-lg">
-                                    <option value="webp">WebP</option>
-                                    <option value="avif">AVIF</option>
-                                    <option value="jpeg">JPEG</option>
-                                    <option value="png">PNG</option>
-                                </select>
+                                <div class="grid grid-cols-2 gap-4" id="formatSelector">
+                                    <label class="format-option">
+                                        <input type="radio" name="format" value="webp" checked class="hidden peer">
+                                        <div
+                                            class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-blue-300">
+                                            <i class="fas fa-file-code text-3xl text-blue-500 mb-2"></i>
+                                            <span class="font-medium">WebP</span>
+                                        </div>
+                                    </label>
+                                    <label class="format-option">
+                                        <input type="radio" name="format" value="avif" class="hidden peer">
+                                        <div
+                                            class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-blue-300">
+                                            <i class="fas fa-file-image text-3xl text-purple-500 mb-2"></i>
+                                            <span class="font-medium">AVIF</span>
+                                        </div>
+                                    </label>
+                                    <label class="format-option">
+                                        <input type="radio" name="format" value="jpeg" class="hidden peer">
+                                        <div
+                                            class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-blue-300">
+                                            <i class="fas fa-file-image text-3xl text-red-500 mb-2"></i>
+                                            <span class="font-medium">JPEG</span>
+                                        </div>
+                                    </label>
+                                    <label class="format-option">
+                                        <input type="radio" name="format" value="png" class="hidden peer">
+                                        <div
+                                            class="flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-blue-300">
+                                            <i class="fas fa-file-image text-3xl text-blue-400 mb-2"></i>
+                                            <span class="font-medium">PNG</span>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
                             <div class="glass-effect p-8 rounded-2xl">
-                                <label for="quality" class="block text-lg font-medium text-gray-800 mb-4">
+                                <label class="block text-lg font-medium text-gray-800 mb-6">
                                     <i class="fas fa-sliders-h mr-3 text-blue-500"></i>
-                                    Качество (0-100%)
+                                    Качество изображения
                                 </label>
-                                <input type="range" id="quality" name="quality" class="w-full" min="0" max="100"
-                                    value="80" step="5">
-                                <div class="text-center text-lg font-medium text-gray-800 quality-value mt-4">80%</div>
+
+                                <div class="relative">
+                                    <input type="range" id="quality" name="quality"
+                                        class="quality-slider w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                        min="0" max="100" value="80" step="5">
+
+                                    <div class="flex justify-between px-1 mt-3">
+                                        <span class="text-sm text-gray-500">0%</span>
+                                        <span class="text-sm text-gray-500">25%</span>
+                                        <span class="text-sm text-gray-500">50%</span>
+                                        <span class="text-sm text-gray-500">75%</span>
+                                        <span class="text-sm text-gray-500">100%</span>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 flex items-center justify-center">
+                                    <div class="text-3xl font-bold text-blue-600 quality-value mr-3">80%</div>
+                                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <i class="fas fa-image text-blue-500 text-xl"></i>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -206,65 +198,139 @@ $user = $isAuth && !empty($_SESSION['user']) ? $_SESSION['user'] : null;
             </div>
         </div>
     </div>
-    <footer class="bg-white text-white mt-20">
+
+    <footer class="bg-gradient-to-br from-gray-50 to-blue-50 border-t border-gray-200 mt-20">
         <div class="container mx-auto px-4 py-12">
-            <div class="max-w-6xl mx-auto">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-                    <div class="glass-effect rounded-2xl p-6">
-                        <h3 class="text-xl font-bold mb-4 gradient-text">
-                            <i class="fas fa-info-circle mr-2"></i> О проекте
-                        </h3>
-                        <p class="text-gray-700">
-                            Enigma Image Converter - мощный инструмент для конвертации изображений между различными
-                            форматами с сохранением качества.
+            <div class="max-w-7xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div class="space-y-5">
+                        <div class="flex items-center">
+                            <img src="./assets/img/favicon/favicon-96x96.png" alt="Logo"
+                                class="h-10 w-10 mr-3 rounded-md">
+                            <span
+                                class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">E-Convertor</span>
+                        </div>
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                            Профессиональный инструмент для конвертации изображений между различными форматами с
+                            сохранением качества.
                         </p>
+                        <div class="flex space-x-4">
+                            <a href="https://github.com/razemsb"
+                                class="text-gray-500 hover:text-blue-600 transition-colors" aria-label="GitHub">
+                                <i class="fab fa-github text-xl"></i>
+                            </a>
+                            <a href="https://t.me/razemsb" class="text-gray-500 hover:text-blue-400 transition-colors"
+                                aria-label="Telegram">
+                                <i class="fab fa-telegram text-xl"></i>
+                            </a>
+                        </div>
                     </div>
 
-                    <div class="glass-effect rounded-2xl p-6">
-                        <h3 class="text-xl font-bold mb-4 gradient-text">
-                            <i class="fas fa-book mr-2"></i> Документация
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-compass mr-2 text-blue-500"></i> Навигация
                         </h3>
-                        <ul class="space-y-2">
+                        <ul class="space-y-3">
                             <li>
-                                <a href="#" class="text-gray-700 hover:text-blue-600 transition-colors">
-                                    <i class="fas fa-file-alt mr-2"></i> Руководство пользователя
+                                <a href="#"
+                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+                                    <i class="fas fa-chevron-right text-xs text-blue-400 mr-2"></i>
+                                    Главная
                                 </a>
                             </li>
                             <li>
-                                <a href="#" class="text-gray-700 hover:text-blue-600 transition-colors">
-                                    <i class="fas fa-code mr-2"></i> API разработчика
+                                <a href="#"
+                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+                                    <i class="fas fa-chevron-right text-xs text-blue-400 mr-2"></i>
+                                    Конвертер
                                 </a>
                             </li>
                             <li>
-                                <a href="#" class="text-gray-700 hover:text-blue-600 transition-colors">
-                                    <i class="fas fa-question-circle mr-2"></i> Частые вопросы
+                                <a href="#"
+                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+                                    <i class="fas fa-chevron-right text-xs text-blue-400 mr-2"></i>
+                                    История
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#"
+                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+                                    <i class="fas fa-chevron-right text-xs text-blue-400 mr-2"></i>
+                                    Настройки
                                 </a>
                             </li>
                         </ul>
                     </div>
 
-                    <div class="glass-effect rounded-2xl p-6">
-                        <h3 class="text-xl font-bold mb-4 gradient-text">
-                            <i class="fas fa-share-alt mr-2"></i> Контакты
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-book-open mr-2 text-blue-500"></i> Документация
                         </h3>
-                        <div class="flex space-x-4">
-                            <a href="https://github.com/razemsb"
-                                class="text-2xl text-gray-700 hover:text-blue-500 transition-colors">
-                                <i class="fab fa-github"></i>
-                            </a>
-                            <a href="https://t.me/razemsb"
-                                class="text-2xl text-gray-700 hover:text-blue-400 transition-colors">
-                                <i class="fab fa-telegram"></i>
-                            </a>
-                        </div>
+                        <ul class="space-y-3">
+                            <li>
+                                <a href="#"
+                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+                                    <i class="fas fa-file-alt text-sm text-blue-400 mr-2"></i>
+                                    Руководство
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#"
+                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+                                    <i class="fas fa-code text-sm text-blue-400 mr-2"></i>
+                                    API
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#"
+                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+                                    <i class="fas fa-question-circle text-sm text-blue-400 mr-2"></i>
+                                    FAQ
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#"
+                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
+                                    <i class="fas fa-bug text-sm text-blue-400 mr-2"></i>
+                                    Сообщить об ошибке
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-envelope mr-2 text-blue-500"></i> Контакты
+                        </h3>
+                        <ul class="space-y-3">
+                            <li class="flex items-center">
+                                <i class="fas fa-envelope text-blue-400 mr-2"></i>
+                                <a href="mailto:support@enigma-convertor.ru"
+                                    class="text-gray-600 hover:text-blue-600 transition-colors">
+                                    support@enigma-convertor.ru
+                                </a>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="fas fa-clock text-blue-400 mr-2"></i>
+                                <span class="text-gray-600">Поддержка 24/7</span>
+                            </li>
+                        </ul>
+
                     </div>
                 </div>
 
-                <div class="border-t border-white/20 mt-12 pt-8 text-center">
+                <div class="border-t border-gray-200 mt-12 pt-8">
                     <div class="flex flex-col md:flex-row justify-between items-center">
-                        <p class="text-gray-900">
+                        <p class="text-gray-500 text-sm">
                             © <?= htmlspecialchars(date('Y')) ?> Enigma ImageConverter. Все права защищены.
                         </p>
+                        <div class="flex space-x-6 mt-4 md:mt-0">
+                            <a href="#" class="text-gray-500 hover:text-gray-700 text-sm transition-colors">Политика
+                                конфиденциальности</a>
+                            <a href="#" class="text-gray-500 hover:text-gray-700 text-sm transition-colors">Условия
+                                использования</a>
+                            <a href="#" class="text-gray-500 hover:text-gray-700 text-sm transition-colors">Cookie</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -272,5 +338,4 @@ $user = $isAuth && !empty($_SESSION['user']) ? $_SESSION['user'] : null;
     </footer>
     <script src="assets/js/script.js"></script>
 </body>
-
 </html>
