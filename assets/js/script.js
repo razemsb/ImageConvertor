@@ -11,10 +11,66 @@ document.addEventListener('DOMContentLoaded', function () {
     const dropdown = document.getElementById('accountDropdown');
     const chevron = document.getElementById('accountChevron');
     const LogoutBtn = document.getElementById('LogoutBtn');
+    const deleteHistory = document.getElementById('deleteHistory');
+    const deleteBtn = document.getElementById('deleteHistory');
+
+
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTime = `${hours}:${minutes}`;
+
+    function showPopUp(type = 'info', message = 'Сообщение', time = '') {
+        const containerId = 'popup-container';
+        let container = document.getElementById(containerId);
+        if (!container) {
+            container = document.createElement('div');
+            container.id = containerId;
+            container.className = 'popup-container';
+            document.body.appendChild(container);
+        }
+
+        const icons = {
+            success: '<i class="fa-solid fa-thumbs-up"></i>',
+            error: '<i class="fa-solid fa-circle-exclamation"></i>',
+            info: '<i class="fa-solid fa-circle-info"></i>'
+        };
+
+        const popup = document.createElement('div');
+        popup.className = `popup ${type}`;
+        popup.innerHTML = `
+            <div class="popup-icon">${icons[type] || 'ℹ️'}</div>
+            <div class="popup-content">
+                <div class="popup-message">${message}</div>
+                <div class="popup-time">${time}</div>
+            </div>
+        `;
+
+        container.appendChild(popup);
+
+        setTimeout(() => {
+            popup.classList.add('hide');
+            popup.addEventListener('transitionend', () => popup.remove());
+        }, 2500);
+    }
 
     function getSelectedFormat() {
         const selectedFormat = document.querySelector('input[name="format"]:checked');
         return selectedFormat ? selectedFormat.value : 'webp';
+    }
+
+    function clearPreview() {
+        const preview = document.getElementById('preview');
+        if (preview) {
+            // Плавное исчезновение элементов
+            const items = preview.querySelectorAll('.preview-item');
+            items.forEach(item => {
+                item.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                item.style.opacity = '0';
+                item.style.transform = 'translateY(20px)';
+                setTimeout(() => item.remove(), 300);
+            });
+        }
     }
 
     let toolbar = document.querySelector('.toolbar');
@@ -87,11 +143,106 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.removeItem('conversionHistory');
         conversionHistory = [];
     }
+
     displayHistory();
+
+    function showDeleteConfirmationModal() {
+
+        const modal = document.createElement('div');
+        modal.id = 'confirmDeleteModal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0';
+        modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full border border-gray-200 transform transition-all duration-300 scale-95">
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="p-3 rounded-full bg-red-100 text-red-500">
+                            <i class="fas fa-exclamation-circle text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800">Подтвердите действие</h3>
+                    </div>
+                    <p class="text-gray-600 mb-6">Вы собираетесь удалить всю историю конвертаций. Это действие невозможно отменить.</p>
+                    
+                    <div class="flex justify-end gap-3">
+                        <button id="cancelDelete" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 ease-in-out">
+                            <i class="fas fa-times mr-2"></i> Отменить
+                        </button>
+                        <button id="confirmDelete" class="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors duration-200 ease-in-out transform hover:scale-[1.02]">
+                            <i class="fas fa-trash-alt mr-2"></i> Удалить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        document.body.style.overflow = 'hidden';
+
+
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+
+
+        document.getElementById('cancelDelete').addEventListener('click', () => {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                document.body.removeChild(modal);
+                document.body.style.overflow = '';
+            }, 300);
+        });
+
+        document.getElementById('confirmDelete').addEventListener('click', async () => {
+
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            await new Promise(resolve => setTimeout(resolve, 300));
+            localStorage.removeItem('conversionHistory');
+            conversionHistory = [];
+            document.body.removeChild(modal);
+            document.body.style.overflow = '';
+            updateUIAfterDeletion();
+
+            showPopUp('info', 'Ваша история конвертаций успешно удалена!', currentTime);
+        });
+
+        function updateUIAfterDeletion() {
+            const deleteHistory = document.getElementById('deleteHistory');
+            if (deleteHistory) deleteHistory.style.display = 'none';
+            const historyList = document.getElementById('history');
+            if (historyList) historyList.innerHTML = `
+            <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-history text-4xl mb-4"></i>
+                    <p>История конвертаций пуста</p>
+            </div>
+            `;
+            clearPreview();
+            updateHistoryDependentElements();
+        }
+
+    }
+
+    if (deleteHistory) {
+        deleteHistory.addEventListener('click', function (e) {
+            e.preventDefault();
+            showDeleteConfirmationModal();
+        });
+
+
+        deleteHistory.classList.add(
+            'transition-colors',
+            'duration-200',
+            'ease-in-out',
+            'transform',
+            'hover:scale-[1.02]'
+        );
+    }
 
     function displayHistory() {
         historyContainer.innerHTML = '';
         if (conversionHistory.length === 0) {
+            deleteBtn.style.display = "none";
             historyContainer.innerHTML = `
                 <div class="text-center text-gray-500 py-8">
                     <i class="fas fa-history text-4xl mb-4"></i>
@@ -102,6 +253,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         conversionHistory.forEach((item, index) => {
+            deleteBtn.style.display = "block";
             const historyItem = document.createElement('div');
             historyItem.className = 'history-item glass-effect p-4 rounded-xl flex items-center justify-between';
             const date = new Date(item.timestamp * 1000);
@@ -243,6 +395,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const data = await response.json();
 
+            console.log('Response: сука ', data);
+
             if (!data.filename) {
                 throw new Error('Сервер не вернул имя файла');
             }
@@ -261,6 +415,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 timestamp: data.timestamp,
                 path: downloadPath
             });
+
+            showPopUp('success', 'Изображение успешно конвертированно!', currentTime);
 
             if (conversionHistory.length > 50) conversionHistory = conversionHistory.slice(0, 50);
             localStorage.setItem('conversionHistory', JSON.stringify(conversionHistory));
@@ -282,7 +438,6 @@ document.addEventListener('DOMContentLoaded', function () {
             statusIndicator.classList.remove('bg-white/90');
             statusIndicator.classList.add('bg-green-50', 'border', 'border-green-100');
 
-            // Добавляем информацию о конвертации
             const fileInfo = previewItem.querySelector('.file-type-badge');
             fileInfo.innerHTML = `
                 <span class="text-green-600 font-medium">${data.format.toUpperCase()}</span>
@@ -301,6 +456,7 @@ document.addEventListener('DOMContentLoaded', function () {
             displayHistory();
 
         } catch (error) {
+            showPopUp('error', 'Ошибка на сервере, попробуйте позже', `${hours}:${minutes}`);
             clearInterval(loadingInterval);
             progressBarInner.style.width = '0%';
 

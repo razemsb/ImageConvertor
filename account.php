@@ -1,6 +1,8 @@
 <?php
-session_start();
-
+$additional_scripts = [
+    './assets/js/account.js'
+];
+include "./assets/include/header.php";
 $requested_username = basename($_SERVER['REQUEST_URI']);
 
 if ($_SERVER['SCRIPT_NAME'] === '/account.php') {
@@ -19,61 +21,7 @@ if (!isset($_SESSION['user_auth']) || $_SESSION['user_auth'] !== true) {
 }
 
 $user = $_SESSION['user'];
-
 ?>
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enigma | Мой аккаунт</title>
-    <link rel="icon" type="image/png" href="assets/img/favicon/favicon-96x96.png" sizes="96x96" />
-    <link rel="icon" type="image/svg+xml" href="assets/img/favicon/favicon.svg" />
-    <link rel="shortcut icon" href="assets/img/favicon/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicon/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="MyWebSite" />
-    <link rel="manifest" href="assets/img/favicon/site.webmanifest" />
-    <script src="assets/vendors/tailwindcss/script.js"></script>
-    <link rel="stylesheet" href="assets/vendors/font-awesome/css/all.min.css">
-    <style>
-        .user-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .history-item {
-            transition: all 0.3s ease;
-        }
-
-        .history-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .role-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .role-user {
-            background-color: #EFF6FF;
-            color: #3B82F6;
-        }
-
-        .role-moderator {
-            background-color: #ECFDF5;
-            color: #10B981;
-        }
-
-        .role-admin {
-            background-color: #FEF2F2;
-            color: #EF4444;
-        }
-    </style>
-</head>
 
 <body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
     <div
@@ -160,7 +108,8 @@ $user = $_SESSION['user'];
                                             <?php endif; ?>
                                         </h2>
                                         <p class="text-gray-500 text-sm">Зарегистрирован:
-                                            <?= date('d.m.Y', strtotime($user['created_at'])) ?></p>
+                                            <?= date('d.m.Y', strtotime($user['created_at'])) ?>
+                                        </p>
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div class="bg-gray-50 p-3 rounded-lg">
@@ -205,145 +154,4 @@ $user = $_SESSION['user'];
             </div>
         </div>
     </div>
-
-    <footer class="bg-gradient-to-br from-gray-50 to-blue-50 border-t border-gray-200 mt-20">
-        <div class="container mx-auto px-4 py-12">
-            <div class="max-w-7xl mx-auto">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <div class="space-y-5">
-                        <div class="flex items-center">
-                            <img src="./assets/img/favicon/favicon-96x96.png" alt="Logo"
-                                class="h-10 w-10 mr-3 rounded-md">
-                            <span
-                                class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">E-Convertor</span>
-                        </div>
-                        <p class="text-gray-600 text-sm leading-relaxed">
-                            Профессиональный инструмент для конвертации изображений между различными форматами с
-                            сохранением качества.
-                        </p>
-                        <div class="flex space-x-4">
-                            <a href="https://github.com/razemsb"
-                                class="text-gray-500 hover:text-blue-600 transition-colors" aria-label="GitHub">
-                                <i class="fab fa-github text-xl"></i>
-                            </a>
-                            <a href="https://t.me/razemsb" class="text-gray-500 hover:text-blue-400 transition-colors"
-                                aria-label="Telegram">
-                                <i class="fab fa-telegram text-xl"></i>
-                            </a>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-compass mr-2 text-blue-500"></i> Навигация
-                        </h3>
-                        <ul class="space-y-3">
-                            <li>
-                                <a href="#"
-                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-                                    <i class="fas fa-chevron-right text-xs text-blue-400 mr-2"></i>
-                                    Главная
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#"
-                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-                                    <i class="fas fa-chevron-right text-xs text-blue-400 mr-2"></i>
-                                    Конвертер
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#"
-                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-                                    <i class="fas fa-chevron-right text-xs text-blue-400 mr-2"></i>
-                                    История
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#"
-                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-                                    <i class="fas fa-chevron-right text-xs text-blue-400 mr-2"></i>
-                                    Настройки
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-book-open mr-2 text-blue-500"></i> Документация
-                        </h3>
-                        <ul class="space-y-3">
-                            <li>
-                                <a href="#"
-                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-                                    <i class="fas fa-file-alt text-sm text-blue-400 mr-2"></i>
-                                    Руководство
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#"
-                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-                                    <i class="fas fa-code text-sm text-blue-400 mr-2"></i>
-                                    API
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#"
-                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-                                    <i class="fas fa-question-circle text-sm text-blue-400 mr-2"></i>
-                                    FAQ
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#"
-                                    class="text-gray-600 hover:text-blue-600 transition-colors flex items-center">
-                                    <i class="fas fa-bug text-sm text-blue-400 mr-2"></i>
-                                    Сообщить об ошибке
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-envelope mr-2 text-blue-500"></i> Контакты
-                        </h3>
-                        <ul class="space-y-3">
-                            <li class="flex items-center">
-                                <i class="fas fa-envelope text-blue-400 mr-2"></i>
-                                <a href="mailto:support@enigma-convertor.ru"
-                                    class="text-gray-600 hover:text-blue-600 transition-colors">
-                                    support@enigma-convertor.ru
-                                </a>
-                            </li>
-                            <li class="flex items-center">
-                                <i class="fas fa-clock text-blue-400 mr-2"></i>
-                                <span class="text-gray-600">Поддержка 24/7</span>
-                            </li>
-                        </ul>
-
-                    </div>
-                </div>
-
-                <div class="border-t border-gray-200 mt-12 pt-8">
-                    <div class="flex flex-col md:flex-row justify-between items-center">
-                        <p class="text-gray-500 text-sm">
-                            © <?= htmlspecialchars(date('Y')) ?> Enigma ImageConverter. Все права защищены.
-                        </p>
-                        <div class="flex space-x-6 mt-4 md:mt-0">
-                            <a href="#" class="text-gray-500 hover:text-gray-700 text-sm transition-colors">Политика
-                                конфиденциальности</a>
-                            <a href="#" class="text-gray-500 hover:text-gray-700 text-sm transition-colors">Условия
-                                использования</a>
-                            <a href="#" class="text-gray-500 hover:text-gray-700 text-sm transition-colors">Cookie</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <script src="./assets/js/account.js"></script>
-</body>
-</html>
+<?php include "./assets/include/footer.php";

@@ -318,10 +318,11 @@ $totalPages = ceil($totalLogs / $perPage);
                             <div class="flex justify-between items-center bg-gray-700/50 p-3 rounded-lg">
                                 <div class="flex items-center">
                                     <!-- Фиксированный размер аватарки с выравниванием -->
-                                    <div class="bg-blue-500/20 rounded-full mr-3 flex items-center justify-center w-10 h-10">
+                                    <div
+                                        class="bg-blue-500/20 rounded-full mr-3 flex items-center justify-center w-10 h-10">
                                         <img src="../assets/img/other/<?= htmlspecialchars($user['avatar']) ?>"
-                                            alt="<?= htmlspecialchars($user['username']) ?>"
-                                            class="w-full h-full" style="object-fit: cover !important; border-radius: 50%;">
+                                            alt="<?= htmlspecialchars($user['username']) ?>" class="w-full h-full"
+                                            style="object-fit: cover !important; border-radius: 50%;">
                                     </div>
                                     <div>
                                         <div class="font-medium">
@@ -354,7 +355,7 @@ $totalPages = ceil($totalLogs / $perPage);
         </section>
 
         <!-- Логи конвертаций -->
-        <section>
+        <section id="history">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-semibold text-blue-400 border-b border-gray-700 pb-2">
                     <i class="fas fa-clipboard-list mr-2"></i>История конвертаций
@@ -438,13 +439,11 @@ $totalPages = ceil($totalLogs / $perPage);
                         <span>Всего записей: <span class="font-bold text-white"><?= $totalLogs ?></span></span>
                         <div class="flex items-center space-x-2">
                             <span>Страница <?= $page ?> из <?= $totalPages ?></span>
-                            <button id="prevPage"
-                                class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors <?= $page <= 1 ? 'opacity-50 cursor-not-allowed' : '' ?>"
-                                <?= $page <= 1 ? 'disabled' : '' ?>>
+                            <button id="prevPage" data-current-page="<?= $page ?>" <?= $page <= 1 ? 'disabled' : '' ?>>
                                 <i class="fas fa-chevron-left"></i> Предыдущая
                             </button>
-                            <button id="nextPage"
-                                class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors <?= $page >= $totalPages ? 'opacity-50 cursor-not-allowed' : '' ?>"
+
+                            <button id="nextPage" data-current-page="<?= $page ?>" data-total-pages="<?= $totalPages ?>"
                                 <?= $page >= $totalPages ? 'disabled' : '' ?>>
                                 Следующая <i class="fas fa-chevron-right"></i>
                             </button>
@@ -456,6 +455,93 @@ $totalPages = ceil($totalLogs / $perPage);
     </main>
 
     <script>
+
+        function updateUrlParams(params) {
+            const url = new URL(window.location.href);
+
+            // Обновляем все переданные параметры
+            Object.keys(params).forEach(key => {
+                if (params[key] !== null && params[key] !== undefined) {
+                    url.searchParams.set(key, params[key]);
+                } else {
+                    url.searchParams.delete(key);
+                }
+            });
+
+            // Перезагружаем страницу с новыми параметрами
+            window.location.href = url.toString();
+        }
+
+        // Обработчик для кнопки "Предыдущая"
+        const prevPageBtn = document.getElementById('prevPage');
+        if (prevPageBtn) {
+            prevPageBtn.addEventListener('click', function (e) {
+                if (this.disabled) return;
+
+                const currentPage = parseInt(this.dataset.currentPage) || 1;
+                updateUrlParams({ page: currentPage - 1 });
+            });
+        }
+
+        // Обработчик для кнопки "Следующая"
+        const nextPageBtn = document.getElementById('nextPage');
+        if (nextPageBtn) {
+            nextPageBtn.addEventListener('click', function (e) {
+                if (this.disabled) return;
+
+                const currentPage = parseInt(this.dataset.currentPage) || 1;
+                updateUrlParams({ page: currentPage + 1 });
+            });
+        }
+
+        // Обработчик для выбора количества элементов на странице
+        const perPageSelect = document.getElementById('perPageSelect');
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', function () {
+                updateUrlParams({
+                    perPage: this.value,
+                    page: 1 // Сбрасываем на первую страницу при изменении количества
+                });
+            });
+        }
+
+        // Функция для показа/скрытия деталей ошибки
+        function setupErrorDetails() {
+            document.querySelectorAll('[data-error-details]').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const detailsId = this.getAttribute('data-error-details');
+                    const details = document.getElementById(detailsId);
+
+                    if (!details) return;
+
+                    // Скрываем все открытые детали
+                    document.querySelectorAll('.error-details').forEach(el => {
+                        if (el.id !== detailsId) el.style.display = 'none';
+                    });
+
+                    // Переключаем текущий элемент
+                    details.style.display = details.style.display === 'block' ? 'none' : 'block';
+
+                    // Позиционируем относительно кнопки
+                    if (details.style.display === 'block') {
+                        const rect = this.getBoundingClientRect();
+                        details.style.top = `${rect.bottom + window.scrollY}px`;
+                        details.style.left = `${rect.left + window.scrollX}px`;
+                    }
+                });
+            });
+
+            // Закрытие при клике вне элемента
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('[data-error-details]') && !e.target.closest('.error-details')) {
+                    document.querySelectorAll('.error-details').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                }
+            });
+        }
+
+        setupErrorDetails();
 
         function showErrorDetails(id) {
             // Скрываем все открытые детали

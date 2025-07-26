@@ -1,5 +1,6 @@
 <?php
 require 'core.php';
+require_once "../config/global_config.php";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_check($_POST['csrf'] ?? '')) {
@@ -9,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $login = $_POST['login'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    $stmt = $pdo->prepare("SELECT * FROM admins WHERE login = ?");
+    $stmt = DB::connect()->prepare("SELECT * FROM admins WHERE login = ?");
     $stmt->execute([$login]);
     $admin = $stmt->fetch();
 

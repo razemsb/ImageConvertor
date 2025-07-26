@@ -15,20 +15,52 @@
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-    20%, 40%, 60%, 80% { transform: translateX(5px); }
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-5px);
+    }
+
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(5px);
+    }
 }
 
 @keyframes pop-in {
-    0% { transform: scale(0.8); opacity: 0; }
-    80% { transform: scale(1.1); }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    80% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .animate-pop-in {
@@ -42,6 +74,7 @@
 .file-type-badge {
     transition: all 0.3s ease;
 }
+
 .drop-zone {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border: 2px dashed #94a3b8;
@@ -141,4 +174,196 @@ input[type="range"]::-webkit-slider-thumb:hover {
     width: 40px;
     height: 40px;
     border-radius: 6px;
+}
+
+.user-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.history-item {
+    transition: all 0.3s ease;
+}
+
+.history-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.role-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.role-user {
+    background-color: #EFF6FF;
+    color: #3B82F6;
+}
+
+.role-moderator {
+    background-color: #ECFDF5;
+    color: #10B981;
+}
+
+.role-admin {
+    background-color: #FEF2F2;
+    color: #EF4444;
+}
+
+.popup-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 9999;
+}
+
+.popup {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 260px;
+    max-width: 340px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #1f1f1f, #2a2a2a);
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+    animation: popIn 0.4s ease;
+    transition: all 0.4s ease;
+}
+
+.popup.hide {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+.popup-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.popup-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.popup-message {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.popup-time {
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+.popup.success {
+    background: linear-gradient(135deg, #084c2e, #0d7c4d);
+    color: #b3fcd3;
+}
+
+.popup.error {
+    background: linear-gradient(135deg, #4c1e1e, #8a2a2a);
+    color: #ffc1c1;
+}
+
+.popup.info {
+    background: linear-gradient(135deg, #1e3a5c, #2e5f8a);
+    color: #b3dcff;
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+
+.flex.items-center.space-x-2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0;
+    color: #e2e8f0;
+   
+}
+
+
+.flex.items-center.space-x-2 span {
+    font-size: 0.875rem;
+    margin-right: 0.5rem;
+}
+
+
+#prevPage,
+#nextPage {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid transparent;
+}
+
+
+#prevPage:not([disabled]),
+#nextPage:not([disabled]) {
+    background-color: #1e3a8a;
+   
+    color: white;
+    border-color: #1e40af;
+}
+
+#prevPage:not([disabled]):hover,
+#nextPage:not([disabled]):hover {
+    background-color: #1e40af;
+   
+    transform: translateY(-1px);
+}
+
+
+#prevPage[disabled],
+#nextPage[disabled] {
+    background-color: #1a202c;
+    color: #4a5568;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.fas {
+    font-size: 0.75rem;
+}
+
+::-webkit-scrollbar {
+    width: 0; 
+    height: 0;
+    background: transparent;
+}
+
+
+html {
+    scrollbar-width: none;
+}
+
+
+body {
+    -ms-overflow-style: none;
 }
