@@ -1,172 +1,25 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_loggin']) || $_SESSION['admin_loggin'] !== true) {
-    header('Location: index.php');
-    exit();
-}
+require_once "../config/DatabaseConnect.php";
+require_once 'AdminCore.php';
 
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'convertor');
+$pdo = DB::connect();
 
-class DB
-{
-    private static $connection = null;
+$adminCore = AdminCore::init($pdo);
+$adminCore->requireAdmin();
 
-    public static function connect()
-    {
-        if (self::$connection === null) {
-            try {
-                self::$connection = new PDO(
-                    'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
-                    DB_USER,
-                    DB_PASS,
-                    [
-                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                        PDO::ATTR_EMULATE_PREPARES => false,
-                    ]
-                );
-            } catch (PDOException $e) {
-                error_log("DB Connection failed: " . $e->getMessage());
-                die("Ошибка подключения к базе данных");
-            }
-        }
-        return self::$connection;
-    }
-}
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$perPage = isset($_GET['perPage']) && in_array($_GET['perPage'], [25, 50, 100]) ? (int)$_GET['perPage'] : 25;
 
-function getConversionStats()
-{
-    $db = DB::connect();
-    $stats = [
-        'total_conversions' => 0,
-        'today_conversions' => 0,
-        'error_rate' => 0,
-        'popular_formats' => [],
-        'active_users' => []
-    ];
-
-    try {
-        // Общее количество конвертаций
-        $stmt = $db->query("SELECT COUNT(*) as count FROM conversions");
-        $stats['total_conversions'] = $stmt->fetchColumn();
-
-        // Конвертации за сегодня
-        $stmt = $db->query("SELECT COUNT(*) as count FROM conversions WHERE DATE(created_at) = CURDATE()");
-        $stats['today_conversions'] = $stmt->fetchColumn();
-
-        // Процент ошибок
-        $stmt = $db->query("SELECT 
-            (COUNT(CASE WHEN status = 'error' THEN 1 END) / COUNT(*)) * 100 as rate 
-            FROM conversions");
-        $stats['error_rate'] = round($stmt->fetchColumn(), 1);
-
-        // Популярные форматы
-        $stmt = $db->query("
-            SELECT new_format as format, COUNT(*) as count 
-            FROM conversions 
-            WHERE status = 'success' AND new_format IS NOT NULL
-            GROUP BY new_format 
-            ORDER BY count DESC 
-            LIMIT 4
-        ");
-        $stats['popular_formats'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Активные пользователи (по вашей структуре)
-        $stmt = $db->query("
-            SELECT 
-                u.id,
-                u.username,
-                u.is_admin as role,
-                u.avatar,
-                COUNT(c.id) as conversions_count,
-                (
-                    SELECT ip 
-                    FROM conversions 
-                    WHERE user_id = u.id 
-                    ORDER BY created_at DESC 
-                    LIMIT 1
-                ) as last_ip
-            FROM users u
-            LEFT JOIN conversions c ON c.user_id = u.id
-            WHERE c.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
-            GROUP BY u.id
-            ORDER BY conversions_count DESC
-            LIMIT 5
-        ");
-        $stats['active_users'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    } catch (PDOException $e) {
-        error_log("Error getting stats: " . $e->getMessage());
-    }
-
-    return $stats;
-}
-
-function getConversionLogs($page = 1, $perPage = 25)
-{
-    $db = DB::connect();
-    $logs = [];
-    $total = 0;
-
-    try {
-        // Подсчет общего количества записей
-        $stmt = $db->query("SELECT COUNT(*) as count FROM conversions");
-        $total = $stmt->fetchColumn();
-
-        // Вычисление смещения для пагинации
-        $offset = ($page - 1) * $perPage;
-
-        // Получение записей с учетом пагинации
-        $stmt = $db->prepare("
-            SELECT 
-                id, ip, original_name, new_name, 
-                original_format, new_format, 
-                original_size, new_size, quality, 
-                status, error_message, created_at
-            FROM conversions
-            ORDER BY created_at DESC
-            LIMIT :limit OFFSET :offset
-        ");
-        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-
-        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    } catch (PDOException $e) {
-        error_log("Error getting logs: " . $e->getMessage());
-    }
-
-    return ['logs' => $logs, 'total' => $total];
-}
-
-/**
- * Форматирование размера файла
- */
-function formatSize($bytes)
-{
-    if ($bytes == 0)
-        return '0 Bytes';
-    $units = ['Bytes', 'KB', 'MB', 'GB'];
-    $i = floor(log($bytes, 1024));
-    return round($bytes / pow(1024, $i), 2) . ' ' . $units[$i];
-}
-
-$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int) $_GET['page'] : 1;
-$perPage = isset($_GET['perPage']) && in_array($_GET['perPage'], [25, 50, 100]) ? (int) $_GET['perPage'] : 25;
-
-$stats = getConversionStats();
-$logData = getConversionLogs($page, $perPage);
+$stats = $adminCore->getConversionStats();
+$logData = $adminCore->getConversionLogs($page, $perPage);
 $logs = $logData['logs'];
 $totalLogs = $logData['total'];
-$totalPages = ceil($totalLogs / $perPage);
+$totalPages = $logData['total_pages'];
+
+$csrfToken = $adminCore->generateCsrfToken();
 ?>
 <!DOCTYPE html>
 <html lang="ru" class="dark">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -213,7 +66,6 @@ $totalPages = ceil($totalLogs / $perPage);
         }
     </style>
 </head>
-
 <body class="bg-gray-900 text-gray-100 min-h-screen">
     <!-- Шапка -->
     <header class="bg-gray-800 shadow-lg">
@@ -413,9 +265,9 @@ $totalPages = ceil($totalLogs / $perPage);
                                         <?= $log['new_format'] ? htmlspecialchars(strtoupper($log['new_format'])) : '-' ?>
                                     </td>
                                     <td class="p-3">
-                                        <?= $log['original_size'] ? formatSize($log['original_size']) : '-' ?>
+                                        <?= $log['original_size'] ? AdminCore::formatFileSize($log['original_size']) : '-' ?>
                                         →
-                                        <?= $log['new_size'] ? formatSize($log['new_size']) : '-' ?>
+                                        <?= $log['new_size'] ? AdminCore::formatFileSize($log['new_size']) : '-' ?>
                                     </td>
                                     <td class="p-3">
                                         <?php if ($log['status'] === 'error' && !empty($log['error_message'])): ?>
@@ -453,13 +305,32 @@ $totalPages = ceil($totalLogs / $perPage);
             </div>
         </section>
     </main>
-
+    <button id="scrollToTopBtn"
+        class="fixed bottom-8 right-8 w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg transition-all duration-300 opacity-0 invisible flex items-center justify-center">
+        <i class="fas fa-arrow-up text-xl"></i>
+    </button>
     <script>
+        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+        const scrollThreshold = 200;
+
+        window.addEventListener('scroll', function () {
+            if (window.pageYOffset > scrollThreshold) {
+                scrollToTopBtn.classList.add('visible');
+            } else {
+                scrollToTopBtn.classList.remove('visible');
+            }
+        });
+        scrollToTopBtn.addEventListener('click', function () {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
 
         function updateUrlParams(params) {
             const url = new URL(window.location.href);
 
-            // Обновляем все переданные параметры
+
             Object.keys(params).forEach(key => {
                 if (params[key] !== null && params[key] !== undefined) {
                     url.searchParams.set(key, params[key]);
@@ -468,11 +339,11 @@ $totalPages = ceil($totalLogs / $perPage);
                 }
             });
 
-            // Перезагружаем страницу с новыми параметрами
+
             window.location.href = url.toString();
         }
 
-        // Обработчик для кнопки "Предыдущая"
+
         const prevPageBtn = document.getElementById('prevPage');
         if (prevPageBtn) {
             prevPageBtn.addEventListener('click', function (e) {
@@ -483,7 +354,7 @@ $totalPages = ceil($totalLogs / $perPage);
             });
         }
 
-        // Обработчик для кнопки "Следующая"
+
         const nextPageBtn = document.getElementById('nextPage');
         if (nextPageBtn) {
             nextPageBtn.addEventListener('click', function (e) {
@@ -494,18 +365,18 @@ $totalPages = ceil($totalLogs / $perPage);
             });
         }
 
-        // Обработчик для выбора количества элементов на странице
+
         const perPageSelect = document.getElementById('perPageSelect');
         if (perPageSelect) {
             perPageSelect.addEventListener('change', function () {
                 updateUrlParams({
                     perPage: this.value,
-                    page: 1 // Сбрасываем на первую страницу при изменении количества
+                    page: 1
                 });
             });
         }
 
-        // Функция для показа/скрытия деталей ошибки
+
         function setupErrorDetails() {
             document.querySelectorAll('[data-error-details]').forEach(btn => {
                 btn.addEventListener('click', function () {
@@ -514,15 +385,15 @@ $totalPages = ceil($totalLogs / $perPage);
 
                     if (!details) return;
 
-                    // Скрываем все открытые детали
+
                     document.querySelectorAll('.error-details').forEach(el => {
                         if (el.id !== detailsId) el.style.display = 'none';
                     });
 
-                    // Переключаем текущий элемент
+
                     details.style.display = details.style.display === 'block' ? 'none' : 'block';
 
-                    // Позиционируем относительно кнопки
+
                     if (details.style.display === 'block') {
                         const rect = this.getBoundingClientRect();
                         details.style.top = `${rect.bottom + window.scrollY}px`;
@@ -531,7 +402,7 @@ $totalPages = ceil($totalLogs / $perPage);
                 });
             });
 
-            // Закрытие при клике вне элемента
+
             document.addEventListener('click', function (e) {
                 if (!e.target.closest('[data-error-details]') && !e.target.closest('.error-details')) {
                     document.querySelectorAll('.error-details').forEach(el => {
@@ -544,23 +415,23 @@ $totalPages = ceil($totalLogs / $perPage);
         setupErrorDetails();
 
         function showErrorDetails(id) {
-            // Скрываем все открытые детали
+
             document.querySelectorAll('.error-details').forEach(el => {
                 el.style.display = 'none';
             });
 
-            // Показываем нужные детали
+
             const details = document.getElementById(id);
             if (details) {
                 details.style.display = 'block';
 
-                // Позиционируем относительно кнопки
+
                 const btn = details.previousElementSibling;
                 const rect = btn.getBoundingClientRect();
                 details.style.top = `${rect.bottom + window.scrollY}px`;
                 details.style.left = `${rect.left + window.scrollX}px`;
 
-                // Закрытие при клике вне элемента
+
                 setTimeout(() => {
                     const clickHandler = (e) => {
                         if (!details.contains(e.target)) {
@@ -586,11 +457,11 @@ $totalPages = ceil($totalLogs / $perPage);
                 return;
             }
 
-            // Получаем данные из PHP
+
             const formatLabels = <?php echo json_encode(array_column($stats['popular_formats'], 'format')); ?>;
             const formatCounts = <?php echo json_encode(array_column($stats['popular_formats'], 'count')); ?>;
 
-            // Проверяем наличие данных
+
             if (!formatLabels || !formatCounts || formatLabels.length === 0 || formatCounts.length === 0) {
                 canvas.style.display = 'none';
                 const noDataMsg = document.createElement('p');
@@ -600,7 +471,7 @@ $totalPages = ceil($totalLogs / $perPage);
                 return;
             }
 
-            // Создаем график
+
             new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -608,10 +479,10 @@ $totalPages = ceil($totalLogs / $perPage);
                     datasets: [{
                         data: formatCounts,
                         backgroundColor: [
-                            'rgba(59, 130, 246, 0.7)',  // Blue
-                            'rgba(16, 185, 129, 0.7)',  // Green
-                            'rgba(245, 158, 11, 0.7)',  // Amber
-                            'rgba(139, 92, 246, 0.7)'   // Purple
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(139, 92, 246, 0.7)'
                         ],
                         borderColor: [
                             'rgba(59, 130, 246, 1)',

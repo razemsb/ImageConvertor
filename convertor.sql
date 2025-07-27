@@ -701,6 +701,7 @@ ALTER TABLE `conversions`
 
 --
 -- Индексы таблицы `users`
+
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),

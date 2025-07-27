@@ -1,9 +1,10 @@
 RewriteEngine On
-
-# Правило для профилей пользователей
 RewriteRule ^([a-zA-Z0-9_-]+)$ account.php?username=$1 [L]
-
-# Стандартные правила для ЧПУ
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . index.php [L]
+
+ErrorDocument 400 /error.php?code=400
+ErrorDocument 403 /error.php?code=403
+ErrorDocument 404 /error.php?code=404
+ErrorDocument 500 /error.php?code=500

@@ -14,6 +14,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const deleteHistory = document.getElementById('deleteHistory');
     const deleteBtn = document.getElementById('deleteHistory');
 
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    const scrollThreshold = 200;
+
+    window.addEventListener('scroll', function () {
+        if (window.pageYOffset > scrollThreshold) {
+            scrollToTopBtn.classList.add('visible');
+        } else {
+            scrollToTopBtn.classList.remove('visible');
+        }
+    });
+    scrollToTopBtn.addEventListener('click', function () {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+
 
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, '0');
@@ -62,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function clearPreview() {
         const preview = document.getElementById('preview');
         if (preview) {
-            // Плавное исчезновение элементов
+
             const items = preview.querySelectorAll('.preview-item');
             items.forEach(item => {
                 item.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
@@ -393,9 +410,16 @@ document.addEventListener('DOMContentLoaded', function () {
             clearInterval(loadingInterval);
             progressBarInner.style.width = '100%';
 
-            const data = await response.json();
-
-            console.log('Response: сука ', data);
+            const rawResponse = await response.text();
+            console.log('Raw response:', rawResponse);
+            try {
+                data = JSON.parse(rawResponse);
+            } catch (e) {
+                console.error('Failed to parse:', rawResponse);
+                throw e;
+            }
+            //const data = await response.json();
+            //console.log('Response: сука ', data);
 
             if (!data.filename) {
                 throw new Error('Сервер не вернул имя файла');
@@ -456,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function () {
             displayHistory();
 
         } catch (error) {
-            showPopUp('error', 'Ошибка на сервере, попробуйте позже', `${hours}:${minutes}`);
+            showPopUp('error', error, `${hours}:${minutes}`);
             clearInterval(loadingInterval);
             progressBarInner.style.width = '0%';
 

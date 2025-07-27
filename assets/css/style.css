@@ -299,7 +299,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     gap: 0.5rem;
     padding: 1rem 0;
     color: #e2e8f0;
-   
+
 }
 
 
@@ -327,7 +327,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 #prevPage:not([disabled]),
 #nextPage:not([disabled]) {
     background-color: #1e3a8a;
-   
+
     color: white;
     border-color: #1e40af;
 }
@@ -335,7 +335,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 #prevPage:not([disabled]):hover,
 #nextPage:not([disabled]):hover {
     background-color: #1e40af;
-   
+
     transform: translateY(-1px);
 }
 
@@ -353,7 +353,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 ::-webkit-scrollbar {
-    width: 0; 
+    width: 0;
     height: 0;
     background: transparent;
 }
@@ -363,7 +363,86 @@ html {
     scrollbar-width: none;
 }
 
-
 body {
     -ms-overflow-style: none;
+}
+
+.form-container {
+    position: relative;
+    min-height: 400px;
+}
+
+.auth-form {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.auth-form.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+    visibility: visible;
+    position: relative;
+}
+
+.tab-btn {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.tab-btn::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 4px;
+    background-color: #6366f1;
+    transition: width 0.3s ease;
+}
+
+.tab-btn.active {
+    color: #6366f1;
+}
+
+.tab-btn.active::after {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .auth-layout {
+        flex-direction: column;
+    }
+
+    .auth-form-section,
+    .auth-hero {
+        width: 100% !important;
+    }
+
+    .auth-hero {
+        padding: 2rem;
+        text-align: center;
+    }
+}
+
+#scrollToTopBtn {
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+}
+
+#scrollToTopBtn.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+#scrollToTopBtn:hover {
+    transform: translateY(-3px) scale(1.05);
 }
