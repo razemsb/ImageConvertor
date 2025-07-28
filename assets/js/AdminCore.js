@@ -1,20 +1,30 @@
 class AdminConverter {
 
     static config = {
-        scrollThreshold: 200,
+        scrollThreshold: 1000,
         chartColors: {
             background: [
-                'rgba(59, 130, 246, 0.7)',
-                'rgba(16, 185, 129, 0.7)',
-                'rgba(245, 158, 11, 0.7)',
-                'rgba(139, 92, 246, 0.7)'
+                'rgba(59, 130, 246, 0.7)',   
+                'rgba(16, 185, 129, 0.7)',   
+                'rgba(245, 158, 11, 0.7)',   
+                'rgba(139, 92, 246, 0.7)',   
+                'rgba(239, 68, 68, 0.7)',    
+                'rgba(236, 72, 153, 0.7)',   
+                'rgba(20, 184, 166, 0.7)',   
+                'rgba(251, 191, 36, 0.7)'    
             ],
+            
             border: [
-                'rgba(59, 130, 246, 1)',
-                'rgba(16, 185, 129, 1)',
-                'rgba(245, 158, 11, 1)',
-                'rgba(139, 92, 246, 1)'
-            ]
+                'rgba(59, 130, 246, 1)',      
+                'rgba(16, 185, 129, 1)',      
+                'rgba(245, 158, 11, 1)',      
+                'rgba(139, 92, 246, 1)',      
+                'rgba(239, 68, 68, 1)',       
+                'rgba(236, 72, 153, 1)',      
+                'rgba(20, 184, 166, 1)',      
+                'rgba(251, 191, 36, 1)'       
+            ],
+            
         }
     };
 
@@ -26,8 +36,6 @@ class AdminConverter {
         this.initErrorDetails();
         this.initChart();
     }
-    
-
 
     static initScrollToTop() {
         const scrollToTopBtn = document.getElementById('scrollToTopBtn');
@@ -118,6 +126,14 @@ class AdminConverter {
         });
     }
 
+    static getRandomColor(alpha = 0.7) {
+        const r = Math.floor(Math.random() * 255);
+        const g = Math.floor(Math.random() * 255);
+        const b = Math.floor(Math.random() * 255);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    
+
 
     static initChart() {
         const canvas = document.getElementById('formatChart');
@@ -161,9 +177,19 @@ class AdminConverter {
                 labels: labels,
                 datasets: [{
                     data: counts,
-                    backgroundColor: this.config.chartColors.background,
-                    borderColor: this.config.chartColors.border,
-                    borderWidth: 1
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)',   
+                        'rgba(236, 72, 153, 0.7)',
+                        'rgba(20, 184, 166, 0.7)',
+                        'rgba(251, 191, 36, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(59, 130, 246, 0.7)',   
+                        'rgba(236, 72, 153, 1)',
+                        'rgba(20, 184, 166, 1)',
+                        'rgba(251, 191, 36, 1)'
+                    ],
+                    borderWidth: 2
                 }]
             },
             options: {

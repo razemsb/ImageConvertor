@@ -71,20 +71,14 @@ class AdminCore
         ];
 
         try {
-
             $stmt = $this->pdo->query("SELECT COUNT(*) as count FROM conversions");
             $stats['total_conversions'] = $stmt->fetchColumn();
-
 
             $stmt = $this->pdo->query("SELECT COUNT(*) as count FROM conversions WHERE DATE(created_at) = CURDATE()");
             $stats['today_conversions'] = $stmt->fetchColumn();
 
-
-            $stmt = $this->pdo->query("SELECT 
-            (COUNT(CASE WHEN status = 'error' THEN 1 END) / COUNT(*)) * 100 as rate 
-            FROM conversions");
-            $stats['error_rate'] = round($stmt->fetchColumn(), 1);
-
+            $stmt = $this->pdo->query("SELECT COUNT(*) FROM conversions WHERE status = 'error'");
+            $stats['error_count'] = (int) $stmt->fetchColumn();
 
             $stmt = $this->pdo->query("
             SELECT new_format as format, COUNT(*) as count 
@@ -97,27 +91,32 @@ class AdminCore
             $stats['popular_formats'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $stmt = $this->pdo->query("
-            SELECT 
-                u.id,
-                u.username,
-                u.is_admin as role,
-                u.avatar,
-                COUNT(c.id) as conversions_count,
-                (
-                    SELECT ip 
-                    FROM conversions 
-                    WHERE user_id = u.id 
-                    ORDER BY created_at DESC 
-                    LIMIT 1
-                ) as last_ip
-            FROM users u
-            LEFT JOIN conversions c ON c.user_id = u.id AND c.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
-            GROUP BY u.id
-            HAVING conversions_count > 0
-            ORDER BY conversions_count DESC
-            LIMIT 5
-        ");
+                SELECT 
+                    u.id,
+                    u.username,
+                    u.role,
+                    u.avatar,
+                    COUNT(c.id) as conversions_count,
+                    (
+                        SELECT ip 
+                        FROM conversions 
+                        WHERE user_id = u.id 
+                        ORDER BY created_at DESC 
+                        LIMIT 1
+                    ) as last_ip
+                FROM users u
+                LEFT JOIN conversions c 
+                    ON c.user_id = u.id 
+                    AND c.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+                GROUP BY u.id
+                HAVING conversions_count > 0
+                ORDER BY conversions_count DESC
+                LIMIT 5
+            ");
+
             $stats['active_users'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
 
         } catch (PDOException $e) {
             error_log("Error getting stats: " . $e->getMessage());
@@ -190,6 +189,29 @@ class AdminCore
             'current_page' => $page
         ];
     }
+
+    public function getAllUsersWithDetails(): array
+    {
+        $stmt = $this->pdo->prepare("
+        SELECT 
+            u.id,
+            u.username,
+            u.email,
+            u.avatar,
+            u.role,
+            u.created_at,
+            u.updated_at,
+            MAX(l.ip) AS last_ip,
+            COUNT(l.id) AS conversions_count
+        FROM users u
+        LEFT JOIN conversions l ON l.user_id = u.id
+        GROUP BY u.id
+        ORDER BY conversions_count DESC, u.username ASC
+    ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 
 
     public static function formatFileSize(int $bytes): string

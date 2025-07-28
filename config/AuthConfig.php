@@ -71,10 +71,21 @@ class Auth
     }
 
 
-    public function register(string $username, string $password): bool
+    public function register(string $username, string $password, string $email): bool
     {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
         $stmt = $this->pdo->prepare("SELECT id FROM users WHERE username = :username");
         $stmt->execute(['username' => $username]);
+
+        if ($stmt->fetch()) {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare("SELECT id FROM users WHERE email = :email");
+        $stmt->execute(['email' => $email]);
 
         if ($stmt->fetch()) {
             return false;
@@ -85,21 +96,23 @@ class Auth
 
         $stmt = $this->pdo->prepare("
         INSERT INTO users 
-        (username, password, avatar, role, created_at, updated_at) 
+        (username, password, email, avatar, role, created_at, updated_at) 
         VALUES 
-        (:username, :password_hash, :avatar, 'user', NOW(), NOW())
-    ");
+        (:username, :password_hash, :email, :avatar, 'user', NOW(), NOW())
+        ");
 
         $result = $stmt->execute([
             'username' => $username,
             'password_hash' => $passwordHash,
+            'email' => $email,
             'avatar' => $randomAvatar
         ]);
 
         if ($result) {
             $userId = $this->pdo->lastInsertId();
+
             $stmt = $this->pdo->prepare("
-            SELECT id, username, avatar, role, created_at, updated_at 
+            SELECT id, username, email, avatar, role, created_at, updated_at 
             FROM users 
             WHERE id = :id
         ");

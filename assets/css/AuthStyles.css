@@ -5,16 +5,6 @@
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
 }
 
-.input-field {
-    transition: all 0.3s ease;
-    background: rgba(17, 24, 39, 0.8);
-}
-
-.input-field:focus {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
-    border-color: rgba(59, 130, 246, 0.5);
-}
-
 .btn-primary {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     transition: all 0.3s ease;
@@ -46,4 +36,19 @@
 .back-btn:hover {
     background: rgba(59, 130, 246, 0.2);
     color: #E5E7EB;
+}
+
+::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+}
+
+
+html {
+    scrollbar-width: none;
+}
+
+body {
+    -ms-overflow-style: none;
 }

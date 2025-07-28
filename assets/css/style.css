@@ -462,11 +462,44 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
 }
 
-
 input[type="radio"]:checked {
     background-color: currentColor;
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
     border-color: transparent;
+}
+
+#adminHeader {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 50;
+    transform: translateY(0);
+    transition: transform 0.3s ease-in-out;
+}
+
+#adminHeader.hidden-up {
+    transform: translateY(-100%);
+}
+
+.tab-btn.active {
+    color: #60a5fa; 
+    background-color: #1f2937; 
+    box-shadow: inset 0 2px 8px rgba(96, 165, 250, 0.2);
+    position: relative;
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #3b82f6; 
+}
+
+#logoutBtn > i {
+    cursor: pointer;
 }

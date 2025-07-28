@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $username = trim($_POST['username'] ?? '');
             $password = $_POST['password'] ?? '';
             $passwordConfirm = $_POST['password_confirm'] ?? '';
+            $email = $_POST['email'] ?? '';
 
             if (empty($username) || empty($password) || empty($passwordConfirm)) {
                 $errorsRegister[] = "Все поля обязательны для заполнения";
@@ -51,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif (strlen($password) < 8) {
                 $errorsRegister[] = "Пароль должен содержать минимум 8 символов";
             } else {
-                if ($auth->register($username, $password)) {
+                if ($auth->register($username, $password, $email)) {
                     header("Location: index.php");
                     exit;
                 } else {
@@ -66,8 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $csrfToken = $auth->generateCsrfToken();
 ?>
 <!DOCTYPE html>
-<html lang="ru" class="h-full bg-gray-100">
-
+<html lang="ru" class="bg-gray-100">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -80,6 +80,7 @@ $csrfToken = $auth->generateCsrfToken();
     <link rel="manifest" href="assets/img/favicon/site.webmanifest" />
     <script src="assets/vendors/tailwindcss/script.js"></script>
     <link rel="stylesheet" href="assets/vendors/font-awesome/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/AuthStyles.css">
     <style>
         :root {
             --primary: #6366f1;
@@ -252,7 +253,7 @@ $csrfToken = $auth->generateCsrfToken();
 <body class="h-full flex auth-layout">
     <div
         class="w-full md:w-2/5 bg-white flex flex-col justify-center px-8 md:px-12 py-12 md:py-16 shadow-lg relative overflow-hidden min-h-screen auth-form-section">
-        <a href="index.html" class="absolute top-5 left-5 text-gray-600 hover:text-gray-900 transition"
+        <a href="index.php" class="absolute top-5 left-5 text-gray-600 hover:text-gray-900 transition"
             aria-label="Назад">
             <i class="fa-solid fa-arrow-left text-2xl"></i>
         </a>
@@ -332,11 +333,12 @@ $csrfToken = $auth->generateCsrfToken();
 
                 <div class="space-y-6">
                     <div>
-                        <label for="registerUsername" class="block mb-2 font-medium text-gray-700">Имя
-                            пользователя</label>
-                        <input id="registerUsername" name="username" type="text" required minlength="4" maxlength="30"
-                            class="w-full px-4 py-2.5 rounded-lg input-field focus:outline-none focus:ring-0"
-                            placeholder="Придумайте логин (от 4 символов)">
+                        <label for="registerUsername" class="block mb-2 font-medium text-gray-700">Имя пользователя</label>
+                        <input id="registerUsername" name="username" type="text" required minlength="4" maxlength="30" class="w-full px-4 py-2.5 rounded-lg input-field focus:outline-none focus:ring-0" placeholder="Придумайте логин (от 4 символов)">
+                    </div>
+                    <div>
+                        <label for="registerEmail" class="block mb-2 font-medium text-gray-700">Почта</label>
+                        <input id="registerEmail" name="email" type="email" required minlength="6" maxlength="40" class="w-full px-4 py-2.5 rounded-lg input-field focus:outline-none focus:ring-0" placeholder="Введите свою почту">
                     </div>
 
                     <div>
@@ -407,7 +409,7 @@ $csrfToken = $auth->generateCsrfToken();
         class="w-full md:w-3/5 bg-gradient-to-tr from-indigo-700 via-purple-800 to-pink-700 text-white p-8 md:p-20 flex flex-col justify-center items-center min-h-screen auth-hero">
         <div class="w-full">
             <img src="./assets/img/other/auth_image.avif" alt="Enigma illustration"
-                class="rounded-lg shadow-xl mb-8 w-full h-auto object-cover max-h-[600px] md:max-h-[600px]">
+                class="rounded-lg shadow-xl mb-8 w-full h-auto object-cover max-h-[600px] md:max-h-[600px]" draggable="false">
             <h2 class="text-3xl md:text-4xl font-extrabold mb-4 text-center">Добро пожаловать в Enigma</h2>
             <p class="text-base md:text-lg text-center text-indigo-100">
                 Удобный и безопасный конвертер изображений с поддержкой разных форматов и качеств.
