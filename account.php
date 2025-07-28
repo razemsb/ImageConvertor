@@ -47,7 +47,7 @@ include "./assets/include/header.php";
             <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-8 py-6">
                 <div class="flex items-center justify-between">
                     <h1 class="text-2xl font-bold text-white flex items-center">
-                        <i class="fas fa-user-circle mr-3"></i>
+                        <i class="fas fa-user-circle mr-3" style="font-size: 2rem;"></i>
                         Мой профиль
                     </h1>
                 </div>

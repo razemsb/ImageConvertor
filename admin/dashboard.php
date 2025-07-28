@@ -7,8 +7,8 @@ $pdo = DB::connect();
 $adminCore = AdminCore::init($pdo);
 $adminCore->requireAdmin();
 
-$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
-$perPage = isset($_GET['perPage']) && in_array($_GET['perPage'], [25, 50, 100]) ? (int)$_GET['perPage'] : 25;
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int) $_GET['page'] : 1;
+$perPage = isset($_GET['perPage']) && in_array($_GET['perPage'], [25, 50, 100]) ? (int) $_GET['perPage'] : 25;
 
 $stats = $adminCore->getConversionStats();
 $logData = $adminCore->getConversionLogs($page, $perPage);
@@ -20,6 +20,7 @@ $csrfToken = $adminCore->generateCsrfToken();
 ?>
 <!DOCTYPE html>
 <html lang="ru" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,8 +34,9 @@ $csrfToken = $adminCore->generateCsrfToken();
     <link rel="stylesheet" href="../assets/css/style.css">
     <script src="../assets/vendors/tailwindcss/script.js"></script>
     <link rel="stylesheet" href="../assets/vendors/font-awesome/css/all.min.js">
-    <script src="../assets/vendors/font-awesome/js/all.min.js" crossorigin="anonymous"></script>
     <script src="../assets/vendors/chartjs/chart.js"></script>
+    <script src="../assets/js/AdminCore.js" defer></script>
+    <script src="../assets/vendors/font-awesome/js/all.min.js" crossorigin="anonymous"></script>
     <style>
         ::-webkit-scrollbar {
             width: 8px;
@@ -52,20 +54,9 @@ $csrfToken = $adminCore->generateCsrfToken();
         ::-webkit-scrollbar-thumb:hover {
             background: #6b7280;
         }
-
-        .error-details {
-            display: none;
-            position: absolute;
-            background: #1f2937;
-            border: 1px solid #374151;
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 100;
-            max-width: 400px;
-            word-wrap: break-word;
-        }
     </style>
 </head>
+
 <body class="bg-gray-900 text-gray-100 min-h-screen">
     <!-- Шапка -->
     <header class="bg-gray-800 shadow-lg">
@@ -155,7 +146,10 @@ $csrfToken = $adminCore->generateCsrfToken();
                         <?php if (empty($stats['popular_formats'])): ?>
                             <p class="text-gray-400 text-center py-10">Нет данных о популярных форматах</p>
                         <?php else: ?>
-                            <canvas id="formatChart"></canvas>
+                            <canvas id="formatChart"
+                                data-labels='<?= json_encode(array_column($stats['popular_formats'], 'format')) ?>'
+                                data-counts='<?= json_encode(array_column($stats['popular_formats'], 'count')) ?>'>
+                            </canvas>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -166,10 +160,10 @@ $csrfToken = $adminCore->generateCsrfToken();
                         <i class="fas fa-user-clock mr-2"></i>Самые активные пользователи
                     </h3>
                     <div class="space-y-3">
+                    <?php if (!empty($stats['active_users'])): ?>
                         <?php foreach ($stats['active_users'] as $user): ?>
                             <div class="flex justify-between items-center bg-gray-700/50 p-3 rounded-lg">
                                 <div class="flex items-center">
-                                    <!-- Фиксированный размер аватарки с выравниванием -->
                                     <div
                                         class="bg-blue-500/20 rounded-full mr-3 flex items-center justify-center w-10 h-10">
                                         <img src="../assets/img/other/<?= htmlspecialchars($user['avatar']) ?>"
@@ -201,6 +195,9 @@ $csrfToken = $adminCore->generateCsrfToken();
                                 </span>
                             </div>
                         <?php endforeach; ?>
+                    <?php else: ?>
+                        <p class="text-gray-400 text-center py-10">Нет данных о активных пользователях</p>
+                    <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -233,6 +230,7 @@ $csrfToken = $adminCore->generateCsrfToken();
                             <tr class="text-left">
                                 <th class="p-3 font-semibold text-gray-300">Дата и время</th>
                                 <th class="p-3 font-semibold text-gray-300">IP адрес</th>
+                                <th class="p-3 font-semibold text-gray-300">Пользователь</th>
                                 <th class="p-3 font-semibold text-gray-300">Статус</th>
                                 <th class="p-3 font-semibold text-gray-300">Исходный файл</th>
                                 <th class="p-3 font-semibold text-gray-300">Форматы</th>
@@ -248,6 +246,16 @@ $csrfToken = $adminCore->generateCsrfToken();
                                     </td>
                                     <td class="p-3 font-mono text-gray-400">
                                         <?= htmlspecialchars($log['ip']) ?>
+                                    </td>
+                                    <td class="p-3 text-gray-400">
+                                        <?php if (!empty($log['user_info']) && !empty($log['user_info']['username'])): ?>
+                                            <?= htmlspecialchars($log['user_info']['username'], ENT_QUOTES, 'UTF-8') ?>
+                                            <span class="text-gray-500 font-mono">(ID: <?= (int) $log['user_id'] ?>)</span>
+                                        <?php elseif (!empty($log['user_id'])): ?>
+                                            <span class="text-gray-500 font-mono">User #<?= (int) $log['user_id'] ?></span>
+                                        <?php else: ?>
+                                            <span class="text-gray-500 italic">Unknown</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="p-3">
                                         <span
@@ -265,19 +273,13 @@ $csrfToken = $adminCore->generateCsrfToken();
                                         <?= $log['new_format'] ? htmlspecialchars(strtoupper($log['new_format'])) : '-' ?>
                                     </td>
                                     <td class="p-3">
-                                        <?= $log['original_size'] ? AdminCore::formatFileSize($log['original_size']) : '-' ?>
+                                        <?= $log['original_size'] ? AdminCore::formatFileSize($log['original_size']) : '0' ?>
                                         →
-                                        <?= $log['new_size'] ? AdminCore::formatFileSize($log['new_size']) : '-' ?>
+                                        <?= $log['new_size'] ? AdminCore::formatFileSize($log['new_size']) : '0' ?>
                                     </td>
                                     <td class="p-3">
-                                        <?php if ($log['status'] === 'error' && !empty($log['error_message'])): ?>
-                                            <button onclick="showErrorDetails('error-details-<?= $log['id'] ?>')"
-                                                class="text-gray-400 hover:text-blue-400 p-1">
-                                                <i class="fas fa-info-circle"></i>
-                                            </button>
-                                            <div id="error-details-<?= $log['id'] ?>" class="error-details">
-                                                <?= htmlspecialchars($log['error_message']) ?>
-                                            </div>
+                                        <?php if ($log['status'] === 'error'): ?>
+                                            <span class="error-message text-gray-400 font-mono"><?= htmlspecialchars($log['error_message'] ?? 'NOTHING') ?></span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -309,220 +311,6 @@ $csrfToken = $adminCore->generateCsrfToken();
         class="fixed bottom-8 right-8 w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg transition-all duration-300 opacity-0 invisible flex items-center justify-center">
         <i class="fas fa-arrow-up text-xl"></i>
     </button>
-    <script>
-        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-        const scrollThreshold = 200;
-
-        window.addEventListener('scroll', function () {
-            if (window.pageYOffset > scrollThreshold) {
-                scrollToTopBtn.classList.add('visible');
-            } else {
-                scrollToTopBtn.classList.remove('visible');
-            }
-        });
-        scrollToTopBtn.addEventListener('click', function () {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        });
-
-        function updateUrlParams(params) {
-            const url = new URL(window.location.href);
-
-
-            Object.keys(params).forEach(key => {
-                if (params[key] !== null && params[key] !== undefined) {
-                    url.searchParams.set(key, params[key]);
-                } else {
-                    url.searchParams.delete(key);
-                }
-            });
-
-
-            window.location.href = url.toString();
-        }
-
-
-        const prevPageBtn = document.getElementById('prevPage');
-        if (prevPageBtn) {
-            prevPageBtn.addEventListener('click', function (e) {
-                if (this.disabled) return;
-
-                const currentPage = parseInt(this.dataset.currentPage) || 1;
-                updateUrlParams({ page: currentPage - 1 });
-            });
-        }
-
-
-        const nextPageBtn = document.getElementById('nextPage');
-        if (nextPageBtn) {
-            nextPageBtn.addEventListener('click', function (e) {
-                if (this.disabled) return;
-
-                const currentPage = parseInt(this.dataset.currentPage) || 1;
-                updateUrlParams({ page: currentPage + 1 });
-            });
-        }
-
-
-        const perPageSelect = document.getElementById('perPageSelect');
-        if (perPageSelect) {
-            perPageSelect.addEventListener('change', function () {
-                updateUrlParams({
-                    perPage: this.value,
-                    page: 1
-                });
-            });
-        }
-
-
-        function setupErrorDetails() {
-            document.querySelectorAll('[data-error-details]').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const detailsId = this.getAttribute('data-error-details');
-                    const details = document.getElementById(detailsId);
-
-                    if (!details) return;
-
-
-                    document.querySelectorAll('.error-details').forEach(el => {
-                        if (el.id !== detailsId) el.style.display = 'none';
-                    });
-
-
-                    details.style.display = details.style.display === 'block' ? 'none' : 'block';
-
-
-                    if (details.style.display === 'block') {
-                        const rect = this.getBoundingClientRect();
-                        details.style.top = `${rect.bottom + window.scrollY}px`;
-                        details.style.left = `${rect.left + window.scrollX}px`;
-                    }
-                });
-            });
-
-
-            document.addEventListener('click', function (e) {
-                if (!e.target.closest('[data-error-details]') && !e.target.closest('.error-details')) {
-                    document.querySelectorAll('.error-details').forEach(el => {
-                        el.style.display = 'none';
-                    });
-                }
-            });
-        }
-
-        setupErrorDetails();
-
-        function showErrorDetails(id) {
-
-            document.querySelectorAll('.error-details').forEach(el => {
-                el.style.display = 'none';
-            });
-
-
-            const details = document.getElementById(id);
-            if (details) {
-                details.style.display = 'block';
-
-
-                const btn = details.previousElementSibling;
-                const rect = btn.getBoundingClientRect();
-                details.style.top = `${rect.bottom + window.scrollY}px`;
-                details.style.left = `${rect.left + window.scrollX}px`;
-
-
-                setTimeout(() => {
-                    const clickHandler = (e) => {
-                        if (!details.contains(e.target)) {
-                            details.style.display = 'none';
-                            document.removeEventListener('click', clickHandler);
-                        }
-                    };
-                    document.addEventListener('click', clickHandler);
-                }, 10);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const canvas = document.getElementById('formatChart');
-            if (!canvas) {
-                console.error('Canvas element for formatChart not found');
-                return;
-            }
-
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                console.error('Failed to get canvas context');
-                return;
-            }
-
-
-            const formatLabels = <?php echo json_encode(array_column($stats['popular_formats'], 'format')); ?>;
-            const formatCounts = <?php echo json_encode(array_column($stats['popular_formats'], 'count')); ?>;
-
-
-            if (!formatLabels || !formatCounts || formatLabels.length === 0 || formatCounts.length === 0) {
-                canvas.style.display = 'none';
-                const noDataMsg = document.createElement('p');
-                noDataMsg.textContent = 'Нет данных о популярных форматах';
-                noDataMsg.className = 'text-gray-400 text-center py-10';
-                canvas.parentNode.appendChild(noDataMsg);
-                return;
-            }
-
-
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: formatLabels,
-                    datasets: [{
-                        data: formatCounts,
-                        backgroundColor: [
-                            'rgba(59, 130, 246, 0.7)',
-                            'rgba(16, 185, 129, 0.7)',
-                            'rgba(245, 158, 11, 0.7)',
-                            'rgba(139, 92, 246, 0.7)'
-                        ],
-                        borderColor: [
-                            'rgba(59, 130, 246, 1)',
-                            'rgba(16, 185, 129, 1)',
-                            'rgba(245, 158, 11, 1)',
-                            'rgba(139, 92, 246, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                color: '#d1d5db',
-                                font: {
-                                    family: "'Inter', sans-serif"
-                                }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = total ? Math.round((value / total) * 100) : 0;
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    },
-                    cutout: '65%'
-                }
-            });
-        });
-    </script>
 </body>
 
 </html>

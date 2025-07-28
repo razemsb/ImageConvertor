@@ -411,7 +411,8 @@ document.addEventListener('DOMContentLoaded', function () {
             progressBarInner.style.width = '100%';
 
             const rawResponse = await response.text();
-            console.log('Raw response:', rawResponse);
+            //console.log('Raw response:', rawResponse);
+
             try {
                 data = JSON.parse(rawResponse);
             } catch (e) {
@@ -480,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function () {
             displayHistory();
 
         } catch (error) {
-            showPopUp('error', error, `${hours}:${minutes}`);
+            showPopUp('error', 'Произошла ошибка на сервере, попробуйте позже.', `${hours}:${minutes}`);
             clearInterval(loadingInterval);
             progressBarInner.style.width = '0%';
 

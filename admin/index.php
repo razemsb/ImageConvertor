@@ -105,38 +105,14 @@ $csrfToken = $adminCore->generateCsrfToken();
   <link rel="manifest" href="../assets/img/favicon/site.webmanifest" />
   <script src="../assets/vendors/tailwindcss/script.js"></script>
   <link rel="stylesheet" href="../assets/vendors/font-awesome/css/all.min.css">
-  <style>
-    .login-box {
-      background: rgba(31, 41, 55, 0.9);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
-    }
-
-    .input-field {
-      transition: all 0.3s ease;
-      background: rgba(17, 24, 39, 0.8);
-    }
-
-    .input-field:focus {
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
-      border-color: rgba(59, 130, 246, 0.5);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-      transition: all 0.3s ease;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-  </style>
+  <link rel="stylesheet" href="../assets/css/AuthStyles.css">
 </head>
 
 <body class="h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-4">
   <div class="login-box rounded-xl overflow-hidden w-full max-w-md">
+    <a id="historyBack" class="back-btn" title="Назад">
+      <i class="fas fa-arrow-left"></i>
+    </a>
     <div class="p-8">
       <div class="text-center mb-8">
         <img src="../assets/img/favicon/favicon-96x96.png" alt="Logo" class="w-16 h-16 mx-auto mb-4 rounded-lg">
@@ -197,10 +173,15 @@ $csrfToken = $adminCore->generateCsrfToken();
   <script>
 
     document.addEventListener('DOMContentLoaded', () => {
+      const BackBtn = document.getElementById('historyBack');
       const form = document.querySelector('.login-box');
       form.style.opacity = '0';
       form.style.transform = 'translateY(20px)';
       form.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+
+      BackBtn.addEventListener('click', function() {
+        window.history.back();
+      });
 
       setTimeout(() => {
         form.style.opacity = '1';

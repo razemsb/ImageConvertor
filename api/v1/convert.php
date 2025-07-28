@@ -7,17 +7,42 @@ require_once("../../config/DatabaseConnect.php");
 
 ConversionLogger::logMessage('Запуск скрипта, проверка компонентов...', 'START', ['GD' => 'Проверка...']);
 
+$clientIP = ConversionLogger::getClientIP();
+$file = $_FILES['image'];
+$format = strtolower($_POST['format'] ?? 'webp');
+$quality = intval($_POST['quality'] ?? 80);
+
+ConversionLogger::logMessage('Получение параметров', 'INFO', [
+    'original_filename' => $file['name'] ?? 'undefined',
+    'tmp_name' => $file['tmp_name'] ?? 'undefined',
+    'mime_type' => $file['type'] ?? 'undefined',
+    'size' => $file['size'] ?? 0,
+    'format' => $format,
+    'quality' => $quality,
+    'ip' => $clientIP
+]);
+
 $user_id = null;
 
-if (isset($_SESSION['user']['id'])) {
-    $user_id = $_SESSION['user']['id'];
+if (isset($_SESSION['auth_user'])) {
+    $user_id = $_SESSION['auth_user']['id'];
     ConversionLogger::logMessage('ID пользователя получен', 'INFO', ['ID' => $user_id]);
 } else {
     ConversionLogger::logMessage('Пользователь не авторизован', 'INFO');
 }
 
+
 if (!extension_loaded('gd') || !function_exists('gd_info')) {
     ConversionLogger::logMessage('Ошибка: модуль GD неактивен', 'ERROR', ['GD Module ' => 'Недоступен', 'Включите его в php.ini и перезагрузите Apache сервер.']);
+    ConversionLogger::logError(
+        $clientIP,
+        $user_id,
+        $file['name'] ?? '',
+        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+        $format ?? '',
+        $quality ?? '',
+          'GD Module Error!'
+    ); 
     die(json_encode(['error' => 'GD не поддерживается на этом сервере']));
 }
 
@@ -37,7 +62,6 @@ if (!file_exists($upload_dir)) {
     ]);
 }
 
-$clientIP = ConversionLogger::getClientIP();
 ConversionLogger::logMessage('Запуск запроса на обработку изображения', 'INFO', ['request' => $_REQUEST, 'ip' => $clientIP]);
 
 if (!isset($_FILES['image'])) {
@@ -45,20 +69,6 @@ if (!isset($_FILES['image'])) {
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'Файл не загружен']));
 }
-
-$file = $_FILES['image'];
-$format = strtolower($_POST['format'] ?? 'webp');
-$quality = intval($_POST['quality'] ?? 80);
-
-ConversionLogger::logMessage('Получение параметров', 'INFO', [
-    'original_filename' => $file['name'] ?? 'undefined',
-    'tmp_name' => $file['tmp_name'] ?? 'undefined',
-    'mime_type' => $file['type'] ?? 'undefined',
-    'size' => $file['size'] ?? 0,
-    'format' => $format,
-    'quality' => $quality,
-    'ip' => $clientIP
-]);
 
 if ($file['error'] !== UPLOAD_ERR_OK) {
     $error_text = ConversionLogger::getUploadErrorText($file['error']);
@@ -131,6 +141,7 @@ if ($format === 'avif' && !function_exists('imageavif')) {
 }
 
 $source_image = null;
+
 try {
     switch ($file['type']) {
         case 'image/jpeg':

@@ -446,3 +446,27 @@ body {
 #scrollToTopBtn:hover {
     transform: translateY(-3px) scale(1.05);
 }
+
+.error-message {
+    font-weight: 600;
+}
+
+
+.filter-section {
+    transition: all 0.3s ease;
+}
+
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+    cursor: pointer;
+}
+
+
+input[type="radio"]:checked {
+    background-color: currentColor;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-color: transparent;
+}

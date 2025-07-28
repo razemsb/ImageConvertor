@@ -17,7 +17,8 @@ include "./assets/include/header.php";
             </div>
             <div class="p-8">
                 <div id="dropZone" class="drop-zone rounded-2xl p-12 text-center cursor-pointer">
-                    <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
+                    <input type="file" id="fileInput" multiple
+                        accept="image/jpeg, image/png, image/gif, image/svg+xml, image/tiff, image/bmp" class="hidden">
                     <div class="space-y-6">
                         <i class="fas fa-cloud-upload-alt text-7xl text-blue-500"></i>
                         <h4 class="text-2xl font-semibold text-gray-800">Перетащите изображения сюда</h4>
