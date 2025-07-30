@@ -1,3 +1,6 @@
+html {
+    scroll-behavior: smooth;
+}
 .loading-spinner {
     width: 16px;
     height: 16px;

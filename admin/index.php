@@ -1,13 +1,11 @@
 <?php
 require_once '../config/DatabaseConnect.php';
 require_once 'AdminCore.php';
+require_once '../config/ErrorHandler.php';
 
-
-if (getenv('ENVIRONMENT') === 'development') {
-  ini_set('display_errors', 1);
-  error_reporting(E_ALL);
+if(!isset($_GET['access']) || $_GET['access'] !== 'ok') {
+  redirectToErrorPage('404', '');
 }
-
 
 if (session_status() === PHP_SESSION_NONE) {
   session_start([
@@ -27,6 +25,9 @@ try {
     header("Location: dashboard.php");
     exit;
   }
+
+  $id = $_SESSION['user_auth']['id'] ?? '0';
+
 } catch (PDOException $e) {
   error_log("Database connection error: " . $e->getMessage());
   die("Системная ошибка. Пожалуйста, попробуйте позже или обратитесь к администратору.");
@@ -34,13 +35,11 @@ try {
 
 $error = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
   if (!$adminCore->validateCsrfToken($_POST['csrf_token'] ?? '')) {
     $error = "Ошибка безопасности сессии. Пожалуйста, обновите страницу.";
   } else {
     $login = trim($_POST['login'] ?? '');
     $password = $_POST['password'] ?? '';
-
 
     if (empty($login) || empty($password)) {
       $error = "Все поля обязательны для заполнения";
@@ -48,35 +47,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       try {
 
         $stmt = $pdo->prepare("
-                    SELECT id, login, password_hash 
+                    SELECT id, user_id, login, password_hash, created_at, last_login, last_ip
                     FROM admins 
-                    WHERE login = :login 
+                    WHERE login = :login
                     LIMIT 1
                 ");
+
         $stmt->bindParam(':login', $login, PDO::PARAM_STR);
         $stmt->execute();
 
         $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($admin) {
-
           if (password_verify($password, $admin['password_hash'])) {
+            
+            $logStmt = $pdo->prepare("
+                  INSERT INTO admin_login_logs 
+                  (admin_id, ip_address, user_agent, success) 
+                  VALUES (:admin_id, :ip, :ua, 1)
+              ");
+            $logStmt->execute([
+              ':admin_id' => $admin['id'],
+              ':ip' => $_SERVER['REMOTE_ADDR'],
+              ':ua' => $_SERVER['HTTP_USER_AGENT'] ?? null
+            ]);
 
+            
+            $updateStmt = $pdo->prepare("
+                  UPDATE admins 
+                  SET last_login = CURRENT_TIMESTAMP
+                  WHERE id = :id
+              ");
+            $updateStmt->execute([':id' => $admin['id']]);
+
+            
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_login'] = $admin['login'];
-
-
             session_regenerate_id(true);
 
             header("Location: dashboard.php");
             exit;
-          } else {
+          } else { 
+            $logStmt = $pdo->prepare("
+                  INSERT INTO admin_login_logs 
+                  (admin_id, ip_address, user_agent, success) 
+                  VALUES (:admin_id, :ip, :ua, 0)
+            ");
+
+            $logStmt->execute([
+              ':admin_id' => $admin['id'],
+              ':ip' => $_SERVER['REMOTE_ADDR'],
+              ':ua' => $_SERVER['HTTP_USER_AGENT'] ?? null
+            ]);
 
             $error = "Неверные учетные данные";
-            error_log("Failed login attempt for admin: " . $login);
           }
-        } else {
 
+        } else {
           $error = "Неверные учетные данные";
         }
       } catch (PDOException $e) {
@@ -86,7 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
 }
-
 
 $csrfToken = $adminCore->generateCsrfToken();
 ?>
@@ -179,7 +205,7 @@ $csrfToken = $adminCore->generateCsrfToken();
       form.style.transform = 'translateY(20px)';
       form.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
 
-      BackBtn.addEventListener('click', function() {
+      BackBtn.addEventListener('click', function () {
         window.history.back();
       });
 

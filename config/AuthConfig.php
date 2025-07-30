@@ -96,9 +96,9 @@ class Auth
 
         $stmt = $this->pdo->prepare("
         INSERT INTO users 
-        (username, password, email, avatar, role, created_at, updated_at) 
+        (username, password, email, avatar, role, status, created_at, updated_at) 
         VALUES 
-        (:username, :password_hash, :email, :avatar, 'user', NOW(), NOW())
+        (:username, :password_hash, :email, :avatar, 'user', 'active', NOW(), NOW())
         ");
 
         $result = $stmt->execute([
@@ -112,7 +112,7 @@ class Auth
             $userId = $this->pdo->lastInsertId();
 
             $stmt = $this->pdo->prepare("
-            SELECT id, username, email, avatar, role, created_at, updated_at 
+            SELECT id, username, email, avatar, role, status created_at, updated_at 
             FROM users 
             WHERE id = :id
         ");

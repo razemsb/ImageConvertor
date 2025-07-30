@@ -19,7 +19,7 @@ function showErrorPage(int $errorCode, string $errorMessage = '', string $custom
     $title = $errorTitles[$errorCode] ?? 'Ошибка';
     $description = $customDescription ?: ($defaultDescriptions[$errorCode] ?? 'Произошла ошибка');
     
-    include './templates/error_page.php';
+    include './../templates/error_page.php';
     exit;
 }
 

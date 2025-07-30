@@ -41,71 +41,61 @@ if ($currentScript === 'account.php' && !empty($user['username'])) {
 $page_title = "Аккаунт";
 include "./assets/include/header.php";
 ?>
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <div class="bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl overflow-hidden border border-white/20">
-            <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-8 py-6">
-                <div class="flex items-center justify-between">
-                    <h1 class="text-2xl font-bold text-white flex items-center">
-                        <i class="fas fa-user-circle mr-3" style="font-size: 2rem;"></i>
-                        Мой профиль
-                    </h1>
+<div class="min-h-screen bg-gradient-to-b from-white to-gray-50 py-14 px-4 font-sans text-gray-900">
+    <div class="max-w-6xl mx-auto space-y-12">
+
+        <section class="flex flex-col md:flex-row items-center md:items-start bg-white border border-gray-200 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] p-10 gap-8">
+            <img src="./assets/img/other/<?= htmlspecialchars($user['avatar'] ?? 'default-avatar.png') ?>"
+                alt="Аватар"
+                class="w-28 h-28 rounded-full border-4 border-white shadow-md object-cover transition-transform duration-300 hover:scale-105">
+
+            <div class="flex-1 space-y-2 text-center md:text-left">
+                <h1 class="text-3xl font-extrabold tracking-tight">
+                    <?= htmlspecialchars($user['username']) ?>
+                    <?php if ($auth->isAdmin()): ?>
+                        <span class="ml-2 px-2 py-1 bg-red-100 text-red-700 rounded-md text-sm font-semibold">(Админ)</span>
+                    <?php endif; ?>
+                </h1>
+                <p class="text-sm text-gray-500">Зарегистрирован: <?= date('d.m.Y', strtotime($user['created_at'])) ?></p>
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Онлайн
                 </div>
             </div>
-            <div class="p-6">
-                <div class="user-card rounded-xl shadow-sm p-6 mb-8">
-                    <div
-                        class="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-6">
-                        <div class="relative">
-                            <img src="./assets/img/other/<?= htmlspecialchars($user['avatar'] ?? 'default-avatar.png') ?>"
-                                alt="Аватар"
-                                class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg">
-                        </div>
-                        <div class="flex-1">
-                            <div class="space-y-4">
-                                <div>
-                                    <h2 class="text-2xl font-bold text-gray-800">
-                                        <?= htmlspecialchars($user['username']) ?>
-                                        <?php if ($auth->isAdmin()): ?>
-                                            <span class="text-xl font-bold text-red-600 ml-2">(Администратор)</span>
-                                        <?php endif; ?>
-                                    </h2>
-                                    <p class="text-gray-500 text-sm">Зарегистрирован:
-                                        <?= date('d.m.Y', strtotime($user['created_at'])) ?>
-                                    </p>
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div class="bg-gray-50 p-3 rounded-lg">
-                                        <p class="text-xs text-gray-500 mb-1">Статус</p>
-                                        <p class="font-medium text-gray-700">
-                                            <span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-                                            Активен
-                                        </p>
-                                    </div>
-                                    <div class="bg-gray-50 p-3 rounded-lg">
-                                        <p class="text-xs text-gray-500 mb-1">Последняя активность</p>
-                                        <p class="font-medium text-gray-700">
-                                            <?= date('H:i', strtotime($user['updated_at'])) ?>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        </section>
 
-                <div class="user-card rounded-xl shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-xl font-bold text-gray-800 flex items-center">
-                            <i class="fas fa-history text-blue-500 mr-3"></i>
-                            История конвертаций
-                        </h2>
-                    </div>
+        <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
+                <p class="text-sm text-gray-500">Всего конвертаций</p>
+                <p class="text-2xl font-semibold mt-1" id="AllConversionCount"></p>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
+                <p class="text-sm text-gray-500">Последний IP</p>
+                <p class="text-lg font-medium mt-1"><?= htmlspecialchars($user['last_ip'] ?? $_SERVER['REMOTE_ADDR']) ?></p>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
+                <p class="text-sm text-gray-500">Платформа</p>
+                <p class="text-sm mt-1 line-clamp-2">
+                    <?= $_SERVER['HTTP_USER_AGENT'] ?? 'Неизвестно' ?>
+                </p>
+            </div>
+        </section>
 
-                    <div id="history" class="space-y-4"></div>
+        <section class="bg-white border border-gray-200 rounded-3xl p-10 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold flex items-center gap-2">
+                    <i class="fas fa-clock-rotate-left text-indigo-500"></i> История конвертаций
+                </h2>
+                <button id="deleteHistory" class="text-sm text-red-500 font-medium hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i> Очистить всё
+                </button>
+            </div>
+
+            <div id="history" class="space-y-4">
+                <div id="noHistory" class="border border-dashed border-gray-300 p-6 rounded-xl text-gray-400 text-center text-sm bg-gray-50">
+                    История пуста. Загрузи файл — и отслеживай магию тут 🔮
                 </div>
             </div>
-        </div>
+        </section>
     </div>
 </div>
 <?php

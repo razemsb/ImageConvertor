@@ -8,7 +8,7 @@ $adminCore = AdminCore::init($pdo);
 $adminCore->requireAdmin();
 
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int) $_GET['page'] : 1;
-$perPage = isset($_GET['perPage']) && in_array($_GET['perPage'], [25, 50, 100]) ? (int) $_GET['perPage'] : 25;
+$perPage = isset($_GET['perPage']) && in_array($_GET['perPage'], [50, 100, 250, 500]) ? (int) $_GET['perPage'] : 100;
 $tab = $_GET['tab'] ?? 'stats';
 
 $csrfToken = $adminCore->generateCsrfToken();
@@ -22,7 +22,6 @@ $allUsers = $adminCore->getAllUsersWithDetails();
 ?>
 <!DOCTYPE html>
 <html lang="ru" class="dark">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -137,6 +136,43 @@ $allUsers = $adminCore->getAllUsersWithDetails();
         </nav>
 
         <section data-tab-content="users" class="<?= $tab !== 'users' ? 'hidden' : '' ?>">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-blue-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm">Всего пользователей</p>
+                        <p class="text-xl font-bold"><?= $stats['total_users'] ?? 'UNKNOW' ?></p>
+                    </div>
+                    <div class="bg-blue-500/20 p-3 rounded-full">
+                        <i class="fas fa-exchange-alt text-blue-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-green-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm">Сегодня</p>
+                        <p class="text-xl font-bold"><?= $stats['today_users'] ?? 'UNKNOW' ?></p>
+                    </div>
+                    <div class="bg-green-500/20 p-3 rounded-full">
+                        <i class="fas fa-calendar-day text-green-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-purple-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm">Активных пользователей</p>
+                        <p class="text-xl font-bold"><?= count($stats['active_users']) ?></p>
+                    </div>
+                    <div class="bg-purple-500/20 p-3 rounded-full">
+                        <i class="fas fa-users text-purple-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
             <h2 class="text-xl font-semibold mb-4 text-blue-400 border-b border-gray-700 pb-2">
                 <i class="fas fa-users mr-2"></i>Все пользователи
             </h2>
@@ -311,21 +347,22 @@ $allUsers = $adminCore->getAllUsersWithDetails();
                         <i class="fas fa-clipboard-list mr-2"></i>История конвертаций
                     </h2>
                     <?php if (!empty($logs)): ?>
-                    <div class="flex flex-wrap gap-3 items-center">
-                        <label for="perPageSelect" class="text-sm text-gray-400 hidden sm:inline">Показывать:</label>
-                        <select id="perPageSelect"
-                            class="bg-gray-800 text-gray-100 px-4 py-2 rounded-lg border border-gray-600 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-sm">
-                            <option value="25" <?= $perPage == 25 ? 'selected' : '' ?>>25 записей</option>
-                            <option value="50" <?= $perPage == 50 ? 'selected' : '' ?>>50 записей</option>
-                            <option value="100" <?= $perPage == 100 ? 'selected' : '' ?>>100 записей</option>
-                        </select>
+                        <div class="flex flex-wrap gap-3 items-center">
+                            <label for="perPageSelect" class="text-sm text-gray-400 hidden sm:inline">Показывать:</label>
+                            <select id="perPageSelect"
+                                class="bg-gray-800 text-gray-100 px-4 py-2 rounded-lg border border-gray-600 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-sm">
+                                <option value="50" <?= $perPage == 50 ? 'selected' : '' ?>>50 записей</option>
+                                <option value="100" <?= $perPage == 100 ? 'selected' : '' ?>>100 записей</option>
+                                <option value="250" <?= $perPage == 250 ? 'selected' : '' ?>>250 записей</option>
+                                <option value="500" <?= $perPage == 500 ? 'selected' : '' ?>>500 записей</option>
+                            </select>
 
-                        <button onclick="window.location.reload()"
-                            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition duration-200">
-                            <i class="fas fa-sync-alt animate-spin-on-hover"></i>
-                            <span class="hidden sm:inline">Обновить</span>
-                        </button>
-                    </div>
+                            <button onclick="window.location.reload()"
+                                class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition duration-200">
+                                <i class="fas fa-sync-alt animate-spin-on-hover"></i>
+                                <span class="hidden sm:inline">Обновить</span>
+                            </button>
+                        </div>
                     <?php endif; ?>
 
                 </div>

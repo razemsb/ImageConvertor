@@ -12,6 +12,7 @@ $user = $auth->getUser();
 ?>
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,49 +67,59 @@ $user = $auth->getUser();
                         id="accountChevron"></i>
                 </button>
                 <div id="accountDropdown"
-                    class="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur-lg rounded-xl shadow-xl ring-1 ring-gray-200/50 opacity-0 pointer-events-none transform scale-95 origin-top-right transition-all duration-200">
-                    <div class="p-2 space-y-1">
+                    class="absolute right-0 top-14 w-80 bg-white border border-neutral-200 shadow-xl rounded-3xl ring-1 ring-black/5 backdrop-blur-2xl transition-all duration-200 origin-top-right scale-95 opacity-0 pointer-events-none z-50">
+
+                    <div class="p-5 border-b border-neutral-100">
+                        <div class="flex items-center gap-4">
+                            <img src="./assets/img/other/<?= htmlspecialchars($user['avatar'] ?? 'default-avatar.png') ?>"
+                                alt="Avatar"
+                                class="w-12 h-12 rounded-full object-cover border border-neutral-200 shadow-sm">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-neutral-900 truncate">
+                                    <?= htmlspecialchars($user['username']) ?>
+                                    <?php if ($auth->isAdmin()): ?>
+                                    <p class="text-xs text-red-500 font-bold truncate">Администратор</p>
+                                <?php endif; ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="py-2 text-sm text-neutral-800">
                         <?php if ($auth->isAdmin()): ?>
-                            <a href="admin/index.php"
-                                class="flex items-center space-x-3 hover:bg-blue-50/50 rounded-lg px-3 py-2.5 transition-all text-gray-700 hover:text-blue-600">
-                                <i class="fas fa-gears text-blue-500 w-5 text-center"></i>
-                                <span class="text-sm font-medium">Админ-Панель</span>
-                                <span class="ml-auto px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">Admin</span>
+                            <a href="admin/index.php?access=ok"
+                                class="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition rounded-2xl group">
+                                <i class="fas fa-gears text-blue-500 w-5 text-center transition-transform"></i>
+                                <span class="flex-1">Админ-Панель</span>
+                                <span
+                                    class="bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-0.5 rounded-full">Admin</span>
                             </a>
-                        <?php endif; ?> 
+                        <?php endif; ?>
+
                         <?php if (isset($page_title) && $page_title !== "Аккаунт"): ?>
-                        <a href="./<?= htmlspecialchars($user['username']) ?>"
-                            class="flex items-center space-x-3 hover:bg-blue-50/50 rounded-lg px-3 py-2.5 transition-all text-gray-700 hover:text-blue-600">
-                            <i class="fas fa-user text-blue-500 w-5 text-center"></i>
-                            <span class="text-sm font-medium">Профиль</span>
-                        </a>
+                            <a href="./<?= htmlspecialchars($user['username']) ?>"
+                                class="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition rounded-2xl group">
+                                <i class="fas fa-user text-blue-500 w-5 text-center transition-transform"></i>
+                                <span>Профиль</span>
+                            </a>
                         <?php endif; ?>
+
                         <?php if (isset($page_title) && $page_title !== "Главная"): ?>
-                        <a href="./index.php"
-                            class="flex items-center space-x-3 hover:bg-blue-50/50 rounded-lg px-3 py-2.5 transition-all text-gray-700 hover:text-blue-600">
-                            <i class="fas fa-home text-blue-500 w-5 text-center"></i>
-                            <span class="text-sm font-medium">Главная</span>
-                        </a>
+                            <a href="./index.php"
+                                class="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition rounded-2xl group">
+                                <i
+                                    class="fas fa-home text-blue-500 w-5 text-center group-hover:scale-110 transition-transform"></i>
+                                <span>Главная</span>
+                            </a>
                         <?php endif; ?>
-                        <div class="border-t border-gray-100 my-1"></div>
+                    </div>
+                    <div class="py-2 border-t border-neutral-100">
                         <button id="LogoutBtn"
-                            class="w-full flex items-center space-x-3 hover:bg-red-50/50 rounded-lg px-3 py-2.5 transition-all text-red-600 hover:text-red-700">
-                            <i class="fas fa-sign-out-alt w-5 text-center"></i>
-                            <span class="text-sm font-medium">Выйти</span>
+                            class="w-full text-left flex items-center gap-3 px-5 py-3 text-red-600 hover:bg-red-50 transition rounded-2xl group">
+                            <i class="fas fa-sign-out-alt w-5 text-center transition-transform"></i>
+                            <span>Выйти</span>
                         </button>
                     </div>
-                </div>
-            <?php else: ?>
-                <div class="flex items-center space-x-3">
-                    <a href="auth.php?action=register"
-                        class="px-4 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
-                        Регистрация
-                    </a>
-                    <a href="auth.php"
-                        class="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm hover:shadow-md font-medium flex items-center">
-                        <i class="fas fa-sign-in-alt mr-2"></i>
-                        Войти
-                    </a>
                 </div>
             <?php endif; ?>
         </div>

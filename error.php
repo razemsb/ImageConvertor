@@ -1,5 +1,5 @@
 <?php
-require_once './config/ErrorHandler.php';
+require_once 'config/ErrorHandler.php';
 
 $errorCode = isset($_GET['code']) ? (int)$_GET['code'] : 404;
 $errorMessage = $_GET['message'] ?? '';

@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
             scrollToTopBtn.classList.remove('visible');
         }
     });
+
     scrollToTopBtn.addEventListener('click', function () {
         window.scrollTo({
             top: 0,
@@ -118,14 +119,17 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btn && dropdown) {
         btn.addEventListener('click', () => {
             const isOpen = dropdown.classList.contains('opacity-100');
+
             if (isOpen) {
                 dropdown.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
                 dropdown.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
                 chevron.style.transform = 'rotate(0deg)';
+                document.body.classList.remove('overflow-hidden'); 
             } else {
                 dropdown.classList.add('opacity-100', 'pointer-events-auto', 'scale-100');
                 dropdown.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
                 chevron.style.transform = 'rotate(180deg)';
+                document.body.classList.add('overflow-hidden');
             }
         });
 
@@ -134,9 +138,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 dropdown.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
                 dropdown.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
                 chevron.style.transform = 'rotate(0deg)';
+                document.body.classList.remove('overflow-hidden'); 
             }
         });
     }
+
 
     let conversionHistory = [];
 
@@ -258,6 +264,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function displayHistory() {
         historyContainer.innerHTML = '';
+        const maxVisible = 5;
+        let isExpanded = false;
+
+        const existingBtn = document.getElementById('toggleHistoryBtn');
+        if (existingBtn) existingBtn.remove();
+
         if (conversionHistory.length === 0) {
             deleteBtn.style.display = "none";
             historyContainer.innerHTML = `
@@ -269,10 +281,14 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        deleteBtn.style.display = "block";
+
         conversionHistory.forEach((item, index) => {
-            deleteBtn.style.display = "block";
             const historyItem = document.createElement('div');
-            historyItem.className = 'history-item glass-effect p-4 rounded-xl flex items-center justify-between';
+            historyItem.className = 'history-item glass-effect p-4 rounded-xl flex items-center justify-between transition-all duration-300';
+            if (index >= maxVisible) historyItem.classList.add('hidden');
+            historyItem.dataset.index = index;
+
             const date = new Date(item.timestamp * 1000);
             const formattedDate = date.toLocaleString('ru-RU', {
                 day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -280,8 +296,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             historyItem.innerHTML = `
                 <div class="flex items-center space-x-4">
-                    <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <img src="./converted/${item.convertedName}" width="100%" height="100%">
+                    <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                        <img src="./converted/${item.convertedName}" class="object-cover w-full h-full" loading="lazy">
                     </div>
                     <div>
                         <h3 class="font-medium text-gray-800">${item.originalName}</h3>
@@ -302,7 +318,36 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             historyContainer.appendChild(historyItem);
         });
+
+        if (conversionHistory.length > maxVisible) {
+            const toggleBtn = document.createElement('button');
+            toggleBtn.id = 'toggleHistoryBtn';
+            toggleBtn.textContent = 'Показать ещё';
+            toggleBtn.className = `
+                px-5 py-2 mt-6 mx-auto block
+                bg-white/30 backdrop-blur-md
+                text-sm font-semibold text-blue-700 
+                hover:bg-blue-50 hover:text-blue-800
+                border border-blue-300 rounded-xl 
+                shadow-sm transition-all duration-200
+            `;
+
+
+            toggleBtn.addEventListener('click', () => {
+                isExpanded = !isExpanded;
+                document.querySelectorAll('.history-item').forEach(item => {
+                    const idx = parseInt(item.dataset.index);
+                    if (idx >= maxVisible) {
+                        item.classList.toggle('hidden', !isExpanded);
+                    }
+                });
+                toggleBtn.textContent = isExpanded ? 'Скрыть' : 'Показать ещё';
+            });
+
+            historyContainer.appendChild(toggleBtn);
+        }
     }
+
 
     window.deleteHistoryItem = function (index) {
         conversionHistory.splice(index, 1);
