@@ -121,6 +121,16 @@ $user = $auth->getUser();
                         </button>
                     </div>
                 </div>
+            <?php else: ?>
+                <div class="flex space-x-4">
+                    <a href="auth.php" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        Вход
+                    </a>
+                    <a href="auth.php?action=register"
+                        class="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-100 transition">
+                        Регистрация
+                    </a>
+                </div>
             <?php endif; ?>
         </div>
     </div>

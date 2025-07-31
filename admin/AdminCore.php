@@ -31,6 +31,70 @@ class AdminCore
         }
     }
 
+    public static function normalizeUserAgent(string $userAgent): string
+    {
+        $userAgent = strtolower($userAgent);
+
+        if (str_contains($userAgent, 'firefox') && !str_contains($userAgent, 'seamonkey')) {
+            return 'Firefox';
+        }
+
+        if (str_contains($userAgent, 'edg/')) {
+            return 'Edge';
+        }
+
+        if (str_contains($userAgent, 'chrome') && !str_contains($userAgent, 'edg/') && !str_contains($userAgent, 'opr/')) {
+            return 'Chrome';
+        }
+
+        if (str_contains($userAgent, 'safari') && !str_contains($userAgent, 'chrome')) {
+            return 'Safari';
+        }
+
+        if (str_contains($userAgent, 'opr/') || str_contains($userAgent, 'opera')) {
+            return 'Opera';
+        }
+
+        return 'Другое';
+    }
+
+    public static function getBrowserInfo(string $ua): array
+    {
+        $ua = strtolower($ua);
+
+        return match (true) {
+            str_contains($ua, 'opr') || str_contains($ua, 'opera gx') => ['Opera GX', 'fa-opera', 'oklch(57.7% 0.245 27.325)'],
+            str_contains($ua, 'opera') => ['Opera', 'fa-opera', '#d03af7'],
+            str_contains($ua, 'edg') => ['Edge', 'fa-edge', '#2a7cec'],
+            str_contains($ua, 'chrome') && !str_contains($ua, 'edg') && !str_contains($ua, 'opr') => ['Chrome', 'fa-chrome', '#f2af1c'],
+            str_contains($ua, 'firefox') => ['Firefox', 'fa-firefox-browser', '#f25a29'],
+            str_contains($ua, 'safari') && !str_contains($ua, 'chrome') => ['Safari', 'fa-safari', '#4ab0f7'],
+            str_contains($ua, 'msie') || str_contains($ua, 'trident') => ['Internet Explorer', 'fa-internet-explorer', '#157dc3'],
+            default => ['Неизвестно', 'fa-question-circle', '#999'],
+        };
+    }
+
+
+
+
+    public static function getNormalizedUserAgents(PDO $pdo): array
+    {
+        $stmt = $pdo->query("SELECT user_agent FROM conversions WHERE user_agent IS NOT NULL AND user_agent != ''");
+
+        $agents = [];
+
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $normalized = self::normalizeUserAgent($row['user_agent']);
+            $agents[$normalized] = ($agents[$normalized] ?? 0) + 1;
+        }
+
+        arsort($agents);
+
+        return $agents;
+    }
+
+
+
 
     public function isAdmin(): bool
     {
@@ -156,7 +220,7 @@ class AdminCore
             $offset = ($page - 1) * $perPage;
             $stmt = $this->pdo->prepare("
                 SELECT 
-                    id, ip, user_id, original_name, new_name, 
+                    id, ip, user_id, user_agent, original_name, new_name, 
                     original_format, new_format, 
                     original_size, new_size, quality, 
                     status, error_message, created_at
@@ -193,24 +257,71 @@ class AdminCore
     public function getAllUsersWithDetails(): array
     {
         $stmt = $this->pdo->prepare("
-        SELECT 
-            u.id,
-            u.username,
-            u.email,
-            u.avatar,
-            u.role,
-            u.created_at,
-            u.updated_at,
-            MAX(l.ip) AS last_ip,
-            COUNT(l.id) AS conversions_count
-        FROM users u
-        LEFT JOIN conversions l ON l.user_id = u.id
-        GROUP BY u.id
-        ORDER BY conversions_count DESC, u.username ASC
-    ");
+    SELECT 
+        u.id,
+        u.username,
+        u.email,
+        MAX(u.last_agent) AS last_agent,
+        u.avatar,
+        u.role,
+        u.created_at,
+        u.updated_at,
+        MAX(l.ip) AS last_ip,
+        COUNT(l.id) AS conversions_count
+    FROM users u
+    LEFT JOIN conversions l ON l.user_id = u.id
+    GROUP BY u.id
+    ORDER BY conversions_count DESC, u.username ASC
+");
+
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public static function formatUserAgentBadge(string $userAgent): string
+    {
+        $ua = strtolower($userAgent);
+        $short = 'Неизвестно';
+        $colorClass = 'text-gray-400 bg-gray-300';
+        $iconClass = 'fa-globe';
+
+        if (strpos($ua, 'edg') !== false) {
+            $short = 'Edge';
+            $colorClass = 'text-blue-400 bg-gray-600';
+            $iconClass = 'fa-edge';
+        } elseif (strpos($ua, 'opr') !== false || strpos($ua, 'opera') !== false) {
+            $short = 'Opera GX';
+            $colorClass = 'text-red-500 bg-gray-600';
+            $iconClass = 'fa-opera';
+        } elseif (strpos($ua, 'chrome') !== false && strpos($ua, 'edg') === false && strpos($ua, 'opr') === false) {
+            $short = 'Chrome';
+            $colorClass = 'text-yellow-400 bg-gray-600';
+            $iconClass = 'fa-chrome';
+        } elseif (strpos($ua, 'firefox') !== false) {
+            $short = 'Firefox';
+            $colorClass = 'text-orange-400 bg-gray-600';
+            $iconClass = 'fa-firefox-browser';
+        } elseif (strpos($ua, 'safari') !== false && strpos($ua, 'chrome') === false) {
+            $short = 'Safari';
+            $colorClass = 'text-teal-400 bg-gray-400';
+            $iconClass = 'fa-safari';
+        }
+
+        return "<span class='inline-flex items-center gap-1 px-2 py-1 rounded $colorClass font-semibold text-xs'>
+                    <i class='fab $iconClass'></i> $short
+                </span>";
+    }
+
+
+    public function getLastAgentByUserId(int $userId): ?string
+    {
+        $stmt = $this->pdo->prepare("SELECT last_agent FROM users WHERE id = :id LIMIT 1");
+        $stmt->execute(['id' => $userId]);
+        $agent = $stmt->fetchColumn();
+        return $agent !== false ? $agent : null;
+    }
+
+
 
 
 

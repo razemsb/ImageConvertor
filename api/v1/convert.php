@@ -8,8 +8,15 @@ require_once("../../config/DatabaseConnect.php");
 ConversionLogger::logMessage('Запуск скрипта, проверка компонентов...', 'START', ['GD' => 'Проверка...']);
 
 $clientIP = ConversionLogger::getClientIP();
+
 $file = $_FILES['image'];
+
+$user_id = null;
+
+$user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+
 $format = strtolower($_POST['format'] ?? 'webp');
+
 $quality = intval($_POST['quality'] ?? 80);
 
 ConversionLogger::logMessage('Получение параметров', 'INFO', [
@@ -22,8 +29,6 @@ ConversionLogger::logMessage('Получение параметров', 'INFO', 
     'ip' => $clientIP
 ]);
 
-$user_id = null;
-
 if (isset($_SESSION['auth_user'])) {
     $user_id = $_SESSION['auth_user']['id'];
     ConversionLogger::logMessage('ID пользователя получен', 'INFO', ['ID' => $user_id]);
@@ -32,11 +37,34 @@ if (isset($_SESSION['auth_user'])) {
 }
 
 
+$maxSize = 5 * 1024 * 1024;
+
+if ($file['size'] > $maxSize) {
+    ConversionLogger::logMessage('Файл превышает максимальный размер', 'ERROR', [
+        'size' => $file['size'],
+        'limit' => $maxSize,
+        'ip' => $clientIP
+    ]);
+    ConversionLogger::logError(
+        $clientIP ?? $_SERVER['REMOTE_ADDR'],
+        $user_id,
+        $user_agent,
+        $file['name'] ?? '',
+        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+        $format,
+        $quality,
+        'MAX_FILE_SIZE_ERROR'
+    ); 
+    header('HTTP/1.1 400 Bad Request');
+    die(json_encode(['error' => 'Файл слишком большой. Максимум 5 МБ']));
+}
+
 if (!extension_loaded('gd') || !function_exists('gd_info')) {
     ConversionLogger::logMessage('Ошибка: модуль GD неактивен', 'ERROR', ['GD Module ' => 'Недоступен', 'Включите его в php.ini и перезагрузите Apache сервер.']);
     ConversionLogger::logError(
         $clientIP,
         $user_id,
+        $user_agent,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format ?? '',
@@ -47,6 +75,7 @@ if (!extension_loaded('gd') || !function_exists('gd_info')) {
 }
 
 $upload_dir = "../../converted/";
+
 if (!file_exists($upload_dir)) {
     if (!mkdir($upload_dir, 0777, true)) {
         ConversionLogger::logMessage('Не удалось создать директорию для хранения изображений', 'ERROR', [
@@ -80,6 +109,7 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
     ConversionLogger::logError(
         $clientIP,
         $user_id,
+        $user_agent,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
@@ -91,30 +121,36 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
 }
 
 $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
-if (!in_array($file['type'], $allowed_types)) {
+
+$finfo = new finfo(FILEINFO_MIME_TYPE);
+$realMime = $finfo->file($file['tmp_name']);
+
+if (!in_array($realMime, $allowed_types)) {
     ConversionLogger::logError(
         $clientIP,
         $user_id,
+        $user_agent,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
         $quality,
-        $e->getMessage()
-    ); 
-    ConversionLogger::logMessage('Тип файла не поддерживается', 'ERROR', [
-        'uploaded_type' => $file['type'],
-        'allowed_types' => $allowed_types,
+        'Определённый MIME не поддерживается: ' . $realMime
+    );
+    ConversionLogger::logMessage('Неверный MIME-тип файла', 'ERROR', [
+        'real_mime' => $realMime,
         'ip' => $clientIP
     ]);
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'Неподдерживаемый формат файла']));
 }
 
+
 if ($format === 'webp' && !function_exists('imagewebp')) {
     ConversionLogger::logMessage('Функция imagewebp отсутствует (WebP не поддерживается)', 'ERROR', ['ip' => $clientIP]);
     ConversionLogger::logError(
         $clientIP,
         $user_id,
+        $user_agent,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
@@ -130,6 +166,7 @@ if ($format === 'avif' && !function_exists('imageavif')) {
     ConversionLogger::logError(
         $clientIP,
         $user_id,
+        $user_agent,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
@@ -169,7 +206,9 @@ try {
         throw new Exception('Не удалось создать ресурс изображения (GD вернул null)');
     }
 
-    $filename = uniqid() . '.' . $format;
+    $unique_name = ConversionLogger::generateUuidV4() . '-' . 'enigma-converted';
+
+    $filename = $unique_name . '.' . $format;
     $output_path = $upload_dir . $filename;
 
     ConversionLogger::logMessage('Начало конвертации изображения', 'INFO', [
@@ -251,6 +290,7 @@ try {
     ConversionLogger::logSuccess(
         $clientIP,
         $user_id,
+        $user_agent,
         $file['name'],
         $filename,
         pathinfo($file['name'], PATHINFO_EXTENSION),
@@ -287,6 +327,7 @@ try {
     ConversionLogger::logError(
         $clientIP,
         $user_id,
+        $user_agent,
         $file['name'] ?? '',
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,

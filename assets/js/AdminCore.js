@@ -35,6 +35,7 @@ class AdminConverter {
         this.initPerPageSelector();
         this.initErrorDetails();
         this.initChart();
+        this.renderAgentChart();
     }
 
     static initScrollToTop() {
@@ -101,6 +102,50 @@ class AdminConverter {
             }
         });
     }
+
+    static renderAgentChart() {
+    const uaCanvas = document.getElementById('userAgentChart');
+    if (uaCanvas) {
+        const labels = JSON.parse(uaCanvas.dataset.labels);
+        const counts = JSON.parse(uaCanvas.dataset.counts);
+        new Chart(uaCanvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: [
+                        '#4F46E5', 
+                        '#3B82F6', 
+                        '#10B981', 
+                        '#F59E0B', 
+                        '#EF4444', 
+                        '#8B5CF6', 
+                        '#EC4899', 
+                        '#14B8A6', 
+                        '#6366F1', 
+                        '#22D3EE'  
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: '#ccc',
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    };
 
     static toggleErrorDetails(detailsId, triggerElement) {
         const details = document.getElementById(detailsId);

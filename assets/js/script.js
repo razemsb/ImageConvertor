@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 dropdown.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
                 dropdown.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
                 chevron.style.transform = 'rotate(0deg)';
-                document.body.classList.remove('overflow-hidden'); 
+                document.body.classList.remove('overflow-hidden');
             } else {
                 dropdown.classList.add('opacity-100', 'pointer-events-auto', 'scale-100');
                 dropdown.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 dropdown.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
                 dropdown.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
                 chevron.style.transform = 'rotate(0deg)';
-                document.body.classList.remove('overflow-hidden'); 
+                document.body.classList.remove('overflow-hidden');
             }
         });
     }
@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (file.type.startsWith('image/')) {
                 previewAndConvertFile(file);
             } else {
-                console.warn(`Файл ${file.name} не является изображением и будет пропущен`);
+                showPopUp('ERROR', 'Файл не является изображением!', currentTime);
             }
         });
     }
@@ -452,6 +452,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: formData,
                 credentials: 'include'
             });
+
+            if (!response.ok) {
+                throw response;
+            }
+
             clearInterval(loadingInterval);
             progressBarInner.style.width = '100%';
 
@@ -526,9 +531,22 @@ document.addEventListener('DOMContentLoaded', function () {
             displayHistory();
 
         } catch (error) {
-            showPopUp('error', 'Произошла ошибка на сервере, попробуйте позже.', `${hours}:${minutes}`);
             clearInterval(loadingInterval);
             progressBarInner.style.width = '0%';
+
+            let errorMsg = 'Произошла ошибка на сервере, попробуйте позже.';
+
+            if (error instanceof Response && error.status === 400) {
+                const errText = await error.text();
+                try {
+                    const errData = JSON.parse(errText);
+                    if (errData?.error?.includes('слишком большой')) {
+                        errorMsg = errData.error;
+                    }
+                } catch { }
+            }
+
+            showPopUp('error', errorMsg, `${hours}:${minutes}`);
 
             const statusIndicator = previewItem.querySelector('.status-indicator');
             statusIndicator.innerHTML = `

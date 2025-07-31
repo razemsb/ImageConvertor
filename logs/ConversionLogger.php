@@ -4,28 +4,28 @@ class ConversionLogger
     private const COOKIE_NAME = 'conv_sid';
     private const SESSION_KEY = 'anon_sid';
 
-    public static function logSuccess($ip, $user_id, $originalName, $newName, $originalFormat, $newFormat, $originalSize, $newSize, $quality)
+    public static function logSuccess($ip, $user_id, $user_agent, $originalName, $newName, $originalFormat, $newFormat, $originalSize, $newSize, $quality)
     {
         $db = DB::connect();
         $stmt = $db->prepare("
             INSERT INTO conversions (
-                ip, user_id, original_name, new_name, original_format, 
+                ip, user_id, user_agent, original_name, new_name, original_format, 
                 new_format, original_size, new_size, quality, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'success')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'success')
         ");
-        $stmt->execute([$ip, $user_id, $originalName, $newName, $originalFormat, $newFormat, $originalSize, $newSize, $quality]);
+        $stmt->execute([$ip, $user_id, $user_agent, $originalName, $newName, $originalFormat, $newFormat, $originalSize, $newSize, $quality]);
     }
 
-    public static function logError($ip, $user_id, $originalName, $originalFormat, $newFormat, $quality, $errorMessage)
+    public static function logError($ip, $user_id, $user_agent, $originalName, $originalFormat, $newFormat, $quality, $errorMessage)
     {
         $db = DB::connect();
         $stmt = $db->prepare("
             INSERT INTO conversions (
-                ip, user_id, original_name, original_format, 
+                ip, user_id, user_agent, original_name, original_format, 
                 new_format, quality, status, error_message
-            ) VALUES (?, ?, ?, ?, ?, ?, 'error', ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'error', ?)
         ");
-        $stmt->execute([$ip, $user_id, $originalName, $originalFormat, $newFormat, $quality, $errorMessage]);
+        $stmt->execute([$ip, $user_id, $user_agent, $originalName, $originalFormat, $newFormat, $quality, $errorMessage]);
     }
 
     public static function getClientIP()
@@ -268,5 +268,14 @@ class ConversionLogger
         $logEntry .= "=======================\n\n";
 
         file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+    }
+    public static function generateUuidV4() {
+        return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
     }
 }

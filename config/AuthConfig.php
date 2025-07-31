@@ -57,11 +57,21 @@ class Auth
 
     public function login(string $username, string $password): bool
     {
-        $stmt = $this->pdo->prepare("SELECT id, username, password, avatar, role, created_at, updated_at FROM users WHERE username = :username");
+        $stmt = $this->pdo->prepare("SELECT id, username, password, email, last_ip, last_agent, avatar, role, created_at, updated_at FROM users WHERE username = :username");
         $stmt->execute(['username' => $username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password'])) {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+
+            $updateStmt = $this->pdo->prepare("UPDATE users SET last_ip = :ip, last_agent = :agent, updated_at = NOW() WHERE id = :id");
+            $updateStmt->execute([
+                'ip' => $ip,
+                'agent' => $agent,
+                'id' => $user['id']
+            ]);
+
             unset($user['password']);
             $_SESSION[$this->sessionKey] = $user;
             return true;
@@ -69,6 +79,7 @@ class Auth
 
         return false;
     }
+
 
 
     public function register(string $username, string $password, string $email): bool
@@ -120,6 +131,15 @@ class Auth
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($user) {
+                $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+
+                $updateStmt = $this->pdo->prepare("UPDATE users SET last_ip = :ip, last_agent = :agent, updated_at = NOW() WHERE id = :id");
+                $updateStmt->execute([
+                    'ip' => $ip,
+                    'agent' => $agent,
+                    'id' => $user['id']
+                ]);
                 $_SESSION[$this->sessionKey] = $user;
                 return true;
             }

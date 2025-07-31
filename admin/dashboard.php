@@ -19,9 +19,11 @@ $logs = $logData['logs'];
 $totalLogs = $logData['total'];
 $totalPages = $logData['total_pages'];
 $allUsers = $adminCore->getAllUsersWithDetails();
+$agents = $adminCore->getNormalizedUserAgents($pdo);
 ?>
 <!DOCTYPE html>
 <html lang="ru" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -136,43 +138,43 @@ $allUsers = $adminCore->getAllUsersWithDetails();
         </nav>
 
         <section data-tab-content="users" class="<?= $tab !== 'users' ? 'hidden' : '' ?>">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-blue-500">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-gray-400 text-sm">Всего пользователей</p>
-                        <p class="text-xl font-bold"><?= $stats['total_users'] ?? 'UNKNOW' ?></p>
-                    </div>
-                    <div class="bg-blue-500/20 p-3 rounded-full">
-                        <i class="fas fa-exchange-alt text-blue-400"></i>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-blue-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-sm">Всего пользователей</p>
+                            <p class="text-xl font-bold"><?= $stats['total_users'] ?? 'UNKNOW' ?></p>
+                        </div>
+                        <div class="bg-blue-500/20 p-3 rounded-full">
+                            <i class="fas fa-exchange-alt text-blue-400"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-green-500">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-gray-400 text-sm">Сегодня</p>
-                        <p class="text-xl font-bold"><?= $stats['today_users'] ?? 'UNKNOW' ?></p>
-                    </div>
-                    <div class="bg-green-500/20 p-3 rounded-full">
-                        <i class="fas fa-calendar-day text-green-400"></i>
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-green-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-sm">Сегодня</p>
+                            <p class="text-xl font-bold"><?= $stats['today_users'] ?? 'UNKNOW' ?></p>
+                        </div>
+                        <div class="bg-green-500/20 p-3 rounded-full">
+                            <i class="fas fa-calendar-day text-green-400"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-purple-500">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-gray-400 text-sm">Активных пользователей</p>
-                        <p class="text-xl font-bold"><?= count($stats['active_users']) ?></p>
-                    </div>
-                    <div class="bg-purple-500/20 p-3 rounded-full">
-                        <i class="fas fa-users text-purple-400"></i>
+                <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-purple-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-sm">Активных пользователей</p>
+                            <p class="text-xl font-bold"><?= count($stats['active_users']) ?></p>
+                        </div>
+                        <div class="bg-purple-500/20 p-3 rounded-full">
+                            <i class="fas fa-users text-purple-400"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
             <h2 class="text-xl font-semibold mb-4 text-blue-400 border-b border-gray-700 pb-2">
                 <i class="fas fa-users mr-2"></i>Все пользователи
             </h2>
@@ -183,7 +185,8 @@ $allUsers = $adminCore->getAllUsersWithDetails();
                             <th class="p-3 font-medium">ID</th>
                             <th class="p-3 font-medium">Имя</th>
                             <th class="p-3 font-medium">Email</th>
-                            <th class="p-3 font-medium">IP</th>
+                            <th class="p-3 font-medium">Последний IP</th>
+                            <th class="p-3 font-medium">Браузер</th>
                             <th class="p-3 font-medium">Роль</th>
                             <th class="p-3 font-medium">Конвертаций</th>
                             <th class="p-3 font-medium">Аватар</th>
@@ -197,6 +200,16 @@ $allUsers = $adminCore->getAllUsersWithDetails();
                                 <td class="p-3 text-gray-400"><?= htmlspecialchars($user['email'] ?? 'UNKNOW') ?></td>
                                 <td class="p-3 font-mono text-gray-400">
                                     <?= htmlspecialchars($user['last_ip'] ?? 'UNKNOW') ?>
+                                </td>
+                                <td>
+                                <?php
+                                $user['user_agent'] = $adminCore->getLastAgentByUserId((int)$user['id']);
+                                [$browserName, $iconClass, $color] = AdminCore::getBrowserInfo($user['user_agent'] ?? '');
+                                ?>
+                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-700 text-xs"
+                                    style="color: <?= $color ?>;">
+                                    <i class="fab <?= $iconClass ?>"></i> <?= htmlspecialchars($browserName) ?>
+                                </span>
                                 </td>
                                 <td class="p-3 capitalize text-sm <?=
                                     $user['role'] === 'admin' ? 'text-purple-400' :
@@ -294,50 +307,75 @@ $allUsers = $adminCore->getAllUsersWithDetails();
 
 
                     <div class="bg-gray-800 rounded-lg p-4 shadow-lg">
-                        <h3 class="font-medium mb-3 text-gray-300">
+                        <h3 class="font-medium mb-4 text-gray-300">
                             <i class="fas fa-user-clock mr-2"></i>Самые активные пользователи
                         </h3>
-                        <div class="space-y-3">
-                            <?php if (!empty($stats['active_users'])): ?>
+
+                        <?php if (!empty($stats['active_users'])): ?>
+                            <div class="space-y-4">
                                 <?php foreach ($stats['active_users'] as $user): ?>
-                                    <div class="flex justify-between items-center bg-gray-700/50 p-3 rounded-lg">
-                                        <div class="flex items-center">
+                                    <div
+                                        class="bg-gray-700/50 rounded-lg p-4 flex flex-col gap-2 shadow-md hover:shadow-lg transition-shadow w-full">
+                                        <div class="flex items-center gap-4">
                                             <div
-                                                class="bg-blue-500/20 rounded-full mr-3 flex items-center justify-center w-10 h-10">
+                                                class="w-10 h-10 rounded-full overflow-hidden bg-blue-500/20 flex items-center justify-center">
                                                 <img src="../assets/img/other/<?= htmlspecialchars($user['avatar']) ?>"
-                                                    alt="<?= htmlspecialchars($user['username']) ?>" class="w-full h-full"
-                                                    style="object-fit: cover !important; border-radius: 50%;">
+                                                    alt="<?= htmlspecialchars($user['username']) ?>"
+                                                    class="w-full h-full object-cover">
                                             </div>
-                                            <div>
-                                                <div class="font-medium">
-                                                    <?= htmlspecialchars($user['username']) ?>
-                                                    <?php if ($user['last_ip']): ?>
-                                                        <span class="text-xs font-normal text-gray-400 ml-2">
-                                                            (<?= htmlspecialchars($user['last_ip']) ?>)
-                                                        </span>
-                                                    <?php endif; ?>
-                                                </div>
-                                                <div class="text-xs text-gray-400">
-                                                    <?= $user['conversions_count'] ?> конвертаций |
-                                                    <span class="capitalize <?=
-                                                        $user['role'] === 'admin' ? 'text-purple-400' :
-                                                        ($user['role'] === 'moderator' ? 'text-blue-400' : 'text-gray-400')
-                                                        ?>">
-                                                        <?= htmlspecialchars($user['role']) ?>
+
+                                            <div class="flex flex-wrap items-center gap-2 text-gray-100 font-medium">
+                                                <span><?= htmlspecialchars($user['username']) ?></span>
+
+                                                <?php if ($user['last_ip']): ?>
+                                                    <span class="text-xs font-normal text-gray-400">
+                                                        (<?= htmlspecialchars($user['last_ip']) ?>)
                                                     </span>
-                                                </div>
+                                                <?php endif; ?>
+
+                                                <?= AdminCore::formatUserAgentBadge($adminCore->getLastAgentByUserId((int) $user['id']) ?? '') ?>
                                             </div>
                                         </div>
-                                        <span class="bg-gray-600 px-2 py-1 rounded text-sm">
-                                            <?= $user['conversions_count'] ?>
-                                        </span>
+
+                                        <div class="flex justify-between items-center text-xs text-gray-400 mt-1">
+                                            <div>
+                                                <?= $user['conversions_count'] ?> конвертаций |
+                                                <span class="capitalize <?=
+                                                    $user['role'] === 'admin' ? 'text-purple-400' :
+                                                    ($user['role'] === 'moderator' ? 'text-blue-400' : 'text-gray-400')
+                                                    ?>">
+                                                    <?= htmlspecialchars($user['role']) ?>
+                                                </span>
+                                            </div>
+                                            <span class="bg-gray-600 px-2 py-1 rounded text-sm text-white">
+                                                <?= $user['conversions_count'] ?>
+                                            </span>
+                                        </div>
                                     </div>
                                 <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="text-gray-400 text-center py-10">Нет данных о активных пользователях</p>
+                        <?php endif; ?>
+                    </div>
+
+
+                    <div class="bg-gray-800 rounded-lg p-4 shadow-lg flex flex-col">
+                        <h3 class="font-medium mb-3 text-gray-300">
+                            <i class="fas fa-browser mr-2"></i>Популярные браузеры
+                        </h3>
+                        <div class="flex-1 min-h-[250px] flex items-center justify-center">
+                            <?php if (empty($agents)): ?>
+                                <p class="text-gray-400 text-center py-10">Нет данных о популярных браузерах</p>
                             <?php else: ?>
-                                <p class="text-gray-400 text-center py-10">Нет данных о активных пользователях</p>
+                                <canvas id="userAgentChart" class="max-h-full max-w-full"
+                                    data-labels='<?= json_encode(array_keys($agents)) ?>'
+                                    data-counts='<?= json_encode(array_values($agents)) ?>'>
+                                </canvas>
                             <?php endif; ?>
                         </div>
                     </div>
+
                 </div>
             </section>
 
@@ -380,6 +418,7 @@ $allUsers = $adminCore->getAllUsersWithDetails();
                                         <th class="p-3 font-semibold text-gray-300">Исходный файл</th>
                                         <th class="p-3 font-semibold text-gray-300">Форматы</th>
                                         <th class="p-3 font-semibold text-gray-300">Размеры</th>
+                                        <th class="p-3 font-semibold text-gray-300">Браузер</th>
                                         <th class="p-3 font-semibold text-gray-300">Детали</th>
                                     </tr>
                                 </thead>
@@ -409,9 +448,11 @@ $allUsers = $adminCore->getAllUsersWithDetails();
                                                     <?= $log['status'] === 'success' ? 'Успех' : 'Ошибка' ?>
                                                 </span>
                                             </td>
-                                            <td class="p-3 text-gray-400">
+                                            <td
+                                                class="p-3 text-gray-400 max-w-[180px] md:max-w-[280px] lg:max-w-[380px] overflow-hidden text-ellipsis whitespace-nowrap">
                                                 <?= htmlspecialchars($log['original_name']) ?>
                                             </td>
+
                                             <td class="p-3">
                                                 <?= htmlspecialchars(strtoupper($log['original_format'])) ?>
                                                 →
@@ -421,6 +462,16 @@ $allUsers = $adminCore->getAllUsersWithDetails();
                                                 <?= $log['original_size'] ? AdminCore::formatFileSize($log['original_size']) : '0' ?>
                                                 →
                                                 <?= $log['new_size'] ? AdminCore::formatFileSize($log['new_size']) : '0' ?>
+                                            </td>
+                                            <td class="p-3 text-gray-300 text-sm">
+                                                <?php
+                                                [$browserName, $iconClass, $color] = AdminCore::getBrowserInfo($log['user_agent'] ?? '');
+                                                ?>
+                                                <span
+                                                    class="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-700 text-xs"
+                                                    style="color: <?= $color ?>;">
+                                                    <i class="fab <?= $iconClass ?>"></i> <?= htmlspecialchars($browserName) ?>
+                                                </span>
                                             </td>
                                             <td class="p-3">
                                                 <?php if ($log['status'] === 'error'): ?>
