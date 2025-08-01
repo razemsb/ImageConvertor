@@ -1,6 +1,7 @@
 <?php
 require_once "../config/DatabaseConnect.php";
 require_once 'AdminCore.php';
+require_once 'AdminFileManager.php';
 
 $pdo = DB::connect();
 
@@ -20,6 +21,8 @@ $totalLogs = $logData['total'];
 $totalPages = $logData['total_pages'];
 $allUsers = $adminCore->getAllUsersWithDetails();
 $agents = $adminCore->getNormalizedUserAgents($pdo);
+$fileManager = new AdminFileManager();
+$oldFiles = $fileManager->getOldFiles();
 ?>
 <!DOCTYPE html>
 <html lang="ru" class="dark">
@@ -42,6 +45,45 @@ $agents = $adminCore->getNormalizedUserAgents($pdo);
     <script src="../assets/vendors/font-awesome/js/all.min.js" crossorigin="anonymous"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.file-action-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const fileId = btn.dataset.id;
+                    const action = btn.dataset.action;
+
+                    try {
+                        const res = await fetch('AjaxRequest.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action, id: fileId })
+                        });
+
+                        const data = await res.json();
+                        console.log('response:', data);
+                        console.log('debug message: ', data.message);
+
+                        if (data.status === 'success') {
+                            const parent = btn.closest('td');
+                            parent.innerHTML = `
+                    <button class="file-action-btn ${data.newClass} text-white px-3 py-1 rounded" 
+                            data-id="${fileId}" data-action="${data.newAction}">
+                        ${data.newLabel}
+                    </button>`;
+
+                            parent.querySelector('.file-action-btn').addEventListener('click', async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                parent.querySelector('.file-action-btn').click();
+                            });
+                        } else {
+                            alert('Ошибка при выполнении действия');
+                        }
+                    } catch (err) {
+                        console.error('Fetch error:', err);
+                    }
+                });
+            });
+
+
             const tabs = document.querySelectorAll('[data-tab]');
             const sections = document.querySelectorAll('[data-tab-content]');
 
@@ -135,9 +177,76 @@ $agents = $adminCore->getNormalizedUserAgents($pdo);
                 class="tab-btn px-4 py-2 font-semibold rounded-t-md transition-all duration-300 text-gray-400 hover:text-blue-300 hover:bg-gray-700">
                 <i class="fa-solid fa-users mr-1"></i> Пользователи
             </button>
+            <button data-tab="old-files"
+                class="tab-btn px-4 py-2 font-semibold rounded-t-md transition-all duration-300 text-gray-400 hover:text-blue-300 hover:bg-gray-700">
+                <i class="fa-solid fa-folder-minus mr-1"></i> Старые файлы
+            </button>
         </nav>
 
+        <section data-tab-content="old-files" class="<?= $tab !== 'old-files' ? 'hidden' : '' ?>">
+            <h2 class="text-xl font-semibold mb-4 text-blue-400 border-b border-gray-700 pb-2">
+                <i class="fas fa-file mr-2"></i>Старые файлы
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm text-gray-300 bg-gray-800 rounded-lg overflow-hidden">
+                    <thead class="bg-gray-700 text-gray-200 text-left">
+                        <tr>
+                            <th class="px-4 py-2">ID</th>
+                            <th class="px-4 py-2">Файл</th>
+                            <th class="px-4 py-2">Пользователь</th>
+                            <th class="px-4 py-2">User-Agent</th>
+                            <th class="px-4 py-2">Дата</th>
+                            <th class="px-4 py-2">Статус</th>
+                            <th class="px-4 py-2">Действие</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($oldFiles as $file): ?>
+                            <?php
+                            $browser = $adminCore->getBrowserInfo($file['user_agent']);
+                            $isDeleted = $file['record-status'] === 'deleted';
+                            ?>
+                            <tr class="border-b border-gray-700 hover:bg-gray-700 transition">
+                                <td class="px-4 py-2"><?= $file['id'] ?></td>
+                                <td class="px-4 py-2"><?= htmlspecialchars($file['original_name']) ?></td>
+                                <td class="px-4 py-2"><?= $fileManager->getUsernameById((int) $file['user_id']) ?></td>
+                                <td class="px-4 py-2">
+                                    <i class="fa-brands <?= $browser[1] ?> mr-1" style="color: <?= $browser[2] ?>"></i>
+                                    <span class="text-xs"><?= $browser[0] ?></span>
+                                </td>
+                                <td class="px-4 py-2"><?= date('d.m.Y H:i', strtotime($file['created_at'])) ?></td>
+                                <td class="px-4 py-2">
+                                    <?php if ($isDeleted): ?>
+                                        <span class="text-red-400">Удалён</span>
+                                    <?php else: ?>
+                                        <span class="text-green-400">Активен</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <?php if ($file['record-status'] === 'active'): ?>
+                                        <button data-id="<?= $file['id'] ?>" data-action="delete"
+                                            class="file-action-btn px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded">
+                                            Удалить
+                                        </button>
+                                    <?php else: ?>
+                                        <button data-id="<?= $file['id'] ?>" data-action="restore"
+                                            class="file-action-btn px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded">
+                                            Восстановить
+                                        </button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+
         <section data-tab-content="users" class="<?= $tab !== 'users' ? 'hidden' : '' ?>">
+            <h2 class="text-xl font-semibold mb-4 text-blue-400 border-b border-gray-700 pb-2">
+                <i class="fas fa-users mr-2"></i>Статистика пользователей
+            </h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <div class="bg-gray-800 rounded-lg p-4 shadow-lg border-l-4 border-blue-500">
                     <div class="flex justify-between items-start">
@@ -202,14 +311,14 @@ $agents = $adminCore->getNormalizedUserAgents($pdo);
                                     <?= htmlspecialchars($user['last_ip'] ?? 'UNKNOW') ?>
                                 </td>
                                 <td>
-                                <?php
-                                $user['user_agent'] = $adminCore->getLastAgentByUserId((int)$user['id']);
-                                [$browserName, $iconClass, $color] = AdminCore::getBrowserInfo($user['user_agent'] ?? '');
-                                ?>
-                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-700 text-xs"
-                                    style="color: <?= $color ?>;">
-                                    <i class="fab <?= $iconClass ?>"></i> <?= htmlspecialchars($browserName) ?>
-                                </span>
+                                    <?php
+                                    $user['user_agent'] = $adminCore->getLastAgentByUserId((int) $user['id']);
+                                    [$browserName, $iconClass, $color] = AdminCore::getBrowserInfo($user['user_agent'] ?? '');
+                                    ?>
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-700 text-xs"
+                                        style="color: <?= $color ?>;">
+                                        <i class="fab <?= $iconClass ?>"></i> <?= htmlspecialchars($browserName) ?>
+                                    </span>
                                 </td>
                                 <td class="p-3 capitalize text-sm <?=
                                     $user['role'] === 'admin' ? 'text-purple-400' :
@@ -306,56 +415,57 @@ $agents = $adminCore->getNormalizedUserAgents($pdo);
 
 
 
-                    <div class="bg-gray-800 rounded-lg p-4 shadow-lg">
-                        <h3 class="font-medium mb-4 text-gray-300">
+                    <div class="bg-gray-800 rounded-lg p-3 shadow-lg">
+                        <h3 class="font-medium mb-3 text-gray-300 text-sm">
                             <i class="fas fa-user-clock mr-2"></i>Самые активные пользователи
                         </h3>
 
                         <?php if (!empty($stats['active_users'])): ?>
-                            <div class="space-y-4">
+                            <div class="space-y-2">
                                 <?php foreach ($stats['active_users'] as $user): ?>
                                     <div
-                                        class="bg-gray-700/50 rounded-lg p-4 flex flex-col gap-2 shadow-md hover:shadow-lg transition-shadow w-full">
-                                        <div class="flex items-center gap-4">
-                                            <div
-                                                class="w-10 h-10 rounded-full overflow-hidden bg-blue-500/20 flex items-center justify-center">
-                                                <img src="../assets/img/other/<?= htmlspecialchars($user['avatar']) ?>"
-                                                    alt="<?= htmlspecialchars($user['username']) ?>"
-                                                    class="w-full h-full object-cover">
-                                            </div>
+                                        class="bg-gray-700/50 rounded p-3 flex items-center gap-3 shadow hover:shadow-md transition-shadow w-full">
+                                        <div class="w-8 h-8 rounded-full overflow-hidden bg-blue-500/20 flex-shrink-0">
+                                            <img src="../assets/img/other/<?= htmlspecialchars($user['avatar']) ?>"
+                                                alt="<?= htmlspecialchars($user['username']) ?>"
+                                                class="w-full h-full object-cover">
+                                        </div>
 
-                                            <div class="flex flex-wrap items-center gap-2 text-gray-100 font-medium">
-                                                <span><?= htmlspecialchars($user['username']) ?></span>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <span class="text-sm font-medium text-gray-100 truncate max-w-[120px]">
+                                                    <?= htmlspecialchars($user['username']) ?>
+                                                </span>
 
                                                 <?php if ($user['last_ip']): ?>
-                                                    <span class="text-xs font-normal text-gray-400">
+                                                    <span class="text-xs text-gray-400">
                                                         (<?= htmlspecialchars($user['last_ip']) ?>)
                                                     </span>
                                                 <?php endif; ?>
 
                                                 <?= AdminCore::formatUserAgentBadge($adminCore->getLastAgentByUserId((int) $user['id']) ?? '') ?>
                                             </div>
-                                        </div>
 
-                                        <div class="flex justify-between items-center text-xs text-gray-400 mt-1">
-                                            <div>
-                                                <?= $user['conversions_count'] ?> конвертаций |
-                                                <span class="capitalize <?=
-                                                    $user['role'] === 'admin' ? 'text-purple-400' :
-                                                    ($user['role'] === 'moderator' ? 'text-blue-400' : 'text-gray-400')
-                                                    ?>">
-                                                    <?= htmlspecialchars($user['role']) ?>
+                                            <div class="flex justify-between items-center text-xs text-gray-400 mt-0.5">
+                                                <div class="truncate">
+                                                    <?= $user['conversions_count'] ?> конвертаций |
+                                                    <span class="capitalize <?=
+                                                        $user['role'] === 'admin' ? 'text-purple-400' :
+                                                        ($user['role'] === 'moderator' ? 'text-blue-400' : 'text-gray-400')
+                                                        ?>">
+                                                        <?= htmlspecialchars($user['role']) ?>
+                                                    </span>
+                                                </div>
+                                                <span class="bg-gray-600 px-1.5 py-0.5 rounded text-xs">
+                                                    <?= $user['conversions_count'] ?>
                                                 </span>
                                             </div>
-                                            <span class="bg-gray-600 px-2 py-1 rounded text-sm text-white">
-                                                <?= $user['conversions_count'] ?>
-                                            </span>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
                         <?php else: ?>
-                            <p class="text-gray-400 text-center py-10">Нет данных о активных пользователях</p>
+                            <p class="text-gray-400 text-center py-4 text-sm">Нет данных о активных пользователях</p>
                         <?php endif; ?>
                     </div>
 
@@ -449,7 +559,7 @@ $agents = $adminCore->getNormalizedUserAgents($pdo);
                                                 </span>
                                             </td>
                                             <td
-                                                class="p-3 text-gray-400 max-w-[180px] md:max-w-[280px] lg:max-w-[380px] overflow-hidden text-ellipsis whitespace-nowrap">
+                                                class="p-3 text-gray-400 max-w-[100px] md:max-w-[200px] lg:max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap">
                                                 <?= htmlspecialchars($log['original_name']) ?>
                                             </td>
 
@@ -459,9 +569,9 @@ $agents = $adminCore->getNormalizedUserAgents($pdo);
                                                 <?= $log['new_format'] ? htmlspecialchars(strtoupper($log['new_format'])) : '-' ?>
                                             </td>
                                             <td class="p-3">
-                                                <?= $log['original_size'] ? AdminCore::formatFileSize($log['original_size']) : '0' ?>
+                                                <?= $log['original_size'] ? AdminCore::formatFileSize($log['original_size']) : 'NULL' ?>
                                                 →
-                                                <?= $log['new_size'] ? AdminCore::formatFileSize($log['new_size']) : '0' ?>
+                                                <?= $log['new_size'] ? AdminCore::formatFileSize($log['new_size']) : 'NULL' ?>
                                             </td>
                                             <td class="p-3 text-gray-300 text-sm">
                                                 <?php
@@ -510,7 +620,6 @@ $agents = $adminCore->getNormalizedUserAgents($pdo);
                     </div>
                 </div>
             </section>
-        </section>
     </main>
     <button id="scrollToTopBtn"
         class="fixed bottom-8 right-8 w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg transition-all duration-300 opacity-0 invisible flex items-center justify-center">

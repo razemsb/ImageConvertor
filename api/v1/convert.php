@@ -95,6 +95,16 @@ ConversionLogger::logMessage('Запуск запроса на обработк�
 
 if (!isset($_FILES['image'])) {
     ConversionLogger::logMessage('Файл изображения не найден в запросе', 'ERROR', ['FILES' => $_FILES, 'ip' => $clientIP]);
+    ConversionLogger::logError(
+        $clientIP,
+        $user_id,
+        $user_agent,
+        $file['name'] ?? '',
+        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+        $format ?? '',
+        $quality ?? '',
+          'FILE ERROR EXSIST!'
+    ); 
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'Файл не загружен']));
 }
@@ -114,7 +124,7 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
         $quality,
-        $e->getMessage()
+        'FILE ERROR UPLOAD!'
     ); 
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => $error_text]));
@@ -123,6 +133,7 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
 $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
 
 $finfo = new finfo(FILEINFO_MIME_TYPE);
+
 $realMime = $finfo->file($file['tmp_name']);
 
 if (!in_array($realMime, $allowed_types)) {
@@ -134,12 +145,22 @@ if (!in_array($realMime, $allowed_types)) {
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format,
         $quality,
-        'Определённый MIME не поддерживается: ' . $realMime
+        'MIME NOT SUPPORTED: ' . $realMime
     );
     ConversionLogger::logMessage('Неверный MIME-тип файла', 'ERROR', [
         'real_mime' => $realMime,
         'ip' => $clientIP
     ]);
+    ConversionLogger::logError(
+        $clientIP,
+        $user_id,
+        $user_agent,
+        $file['name'] ?? '',
+        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+        $format ?? '',
+        $quality ?? '',
+          'MIME TYPE ERROR'
+    ); 
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'Неподдерживаемый формат файла']));
 }
@@ -147,16 +168,6 @@ if (!in_array($realMime, $allowed_types)) {
 
 if ($format === 'webp' && !function_exists('imagewebp')) {
     ConversionLogger::logMessage('Функция imagewebp отсутствует (WebP не поддерживается)', 'ERROR', ['ip' => $clientIP]);
-    ConversionLogger::logError(
-        $clientIP,
-        $user_id,
-        $user_agent,
-        $file['name'] ?? '',
-        pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
-        $format,
-        $quality,
-        $e->getMessage()
-    ); 
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'WebP не поддерживается на этом сервере']));
 }
@@ -203,6 +214,16 @@ try {
     }
 
     if (!$source_image) {
+        ConversionLogger::logError(
+            $clientIP,
+            $user_id,
+            $user_agent,
+            $file['name'] ?? '',
+            pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
+            $format ?? '',
+            $quality ?? '',
+              'GD Module return Error!'
+        ); 
         throw new Exception('Не удалось создать ресурс изображения (GD вернул null)');
     }
 
@@ -217,7 +238,9 @@ try {
         'full_path' => $output_path,
         'ip' => $clientIP
     ]);
+
     $success = false;
+
     switch ($format) {
         case 'webp':
             $success = imagewebp($source_image, $output_path, $quality);

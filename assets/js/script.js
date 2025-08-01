@@ -91,14 +91,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    let toolbar = document.querySelector('.toolbar');
-
-    if (!toolbar) {
-        toolbar = document.createElement('div');
-        toolbar.className = 'toolbar flex items-center justify-between sticky p-4 bg-white shadow-md mb-4';
-        document.body.insertBefore(toolbar, document.body.firstChild);
-    }
-
     if (LogoutBtn) {
         LogoutBtn.addEventListener('click', function () {
             fetch('./config/logout.php', {
@@ -140,6 +132,33 @@ document.addEventListener('DOMContentLoaded', function () {
                 chevron.style.transform = 'rotate(0deg)';
                 document.body.classList.remove('overflow-hidden');
             }
+        });
+    }
+
+    window.addEventListener('scroll', function() {
+        const toolbar = document.getElementById('toolbar');
+        if (window.scrollY > 10) {
+            toolbar.classList.add('shadow-md', 'bg-white/100');
+            toolbar.classList.remove('bg-white/95');
+        } else {
+            toolbar.classList.remove('shadow-md', 'bg-white/100');
+            toolbar.classList.add('bg-white/95');
+        }
+    });
+
+    const accountButton = document.getElementById('accountButton');
+    const accountDropdown = document.getElementById('accountDropdown');
+    const accountChevron = document.getElementById('accountChevron');
+
+    if (accountButton && accountDropdown) {
+        accountButton.addEventListener('click', function() {
+            const isOpen = accountDropdown.classList.contains('opacity-0');
+            
+            accountDropdown.classList.toggle('opacity-0', !isOpen);
+            accountDropdown.classList.toggle('scale-95', !isOpen);
+            accountDropdown.classList.toggle('pointer-events-none', !isOpen);
+            accountChevron.classList.toggle('transform', isOpen);
+            accountChevron.classList.toggle('rotate-180', isOpen);
         });
     }
 

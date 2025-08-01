@@ -35,13 +35,23 @@ class AdminCore
     {
         $userAgent = strtolower($userAgent);
 
-        if (str_contains($userAgent, 'firefox') && !str_contains($userAgent, 'seamonkey')) {
-            return 'Firefox';
+
+        if (str_contains($userAgent, 'yabrowser')) {
+            return 'Yandex';
         }
 
         if (str_contains($userAgent, 'edg/')) {
             return 'Edge';
         }
+
+        if (str_contains($userAgent, 'opr/') || str_contains($userAgent, 'opera')) {
+            return 'Opera';
+        }
+
+        if (str_contains($userAgent, 'firefox') && !str_contains($userAgent, 'seamonkey')) {
+            return 'Firefox';
+        }
+
 
         if (str_contains($userAgent, 'chrome') && !str_contains($userAgent, 'edg/') && !str_contains($userAgent, 'opr/')) {
             return 'Chrome';
@@ -51,31 +61,8 @@ class AdminCore
             return 'Safari';
         }
 
-        if (str_contains($userAgent, 'opr/') || str_contains($userAgent, 'opera')) {
-            return 'Opera';
-        }
-
         return 'Другое';
     }
-
-    public static function getBrowserInfo(string $ua): array
-    {
-        $ua = strtolower($ua);
-
-        return match (true) {
-            str_contains($ua, 'opr') || str_contains($ua, 'opera gx') => ['Opera GX', 'fa-opera', 'oklch(57.7% 0.245 27.325)'],
-            str_contains($ua, 'opera') => ['Opera', 'fa-opera', '#d03af7'],
-            str_contains($ua, 'edg') => ['Edge', 'fa-edge', '#2a7cec'],
-            str_contains($ua, 'chrome') && !str_contains($ua, 'edg') && !str_contains($ua, 'opr') => ['Chrome', 'fa-chrome', '#f2af1c'],
-            str_contains($ua, 'firefox') => ['Firefox', 'fa-firefox-browser', '#f25a29'],
-            str_contains($ua, 'safari') && !str_contains($ua, 'chrome') => ['Safari', 'fa-safari', '#4ab0f7'],
-            str_contains($ua, 'msie') || str_contains($ua, 'trident') => ['Internet Explorer', 'fa-internet-explorer', '#157dc3'],
-            default => ['Неизвестно', 'fa-question-circle', '#999'],
-        };
-    }
-
-
-
 
     public static function getNormalizedUserAgents(PDO $pdo): array
     {
@@ -93,8 +80,27 @@ class AdminCore
         return $agents;
     }
 
+    public static function getBrowserInfo(string $ua): array
+    {
+        $ua = strtolower($ua);
 
-
+        return match (true) {
+            str_contains($ua, 'yabrowser') => ['Яндекс Браузер', 'fa-yandex-international', '#ffcc00'],
+            str_contains($ua, 'opr') || str_contains($ua, 'opera gx') => ['Opera GX', 'fa-opera', 'oklch(57.7% 0.245 27.325)'],
+            str_contains($ua, 'opera') => ['Opera', 'fa-opera', '#d03af7'],
+            str_contains($ua, 'vivaldi') => ['Vivaldi', 'fa-v', '#ef3939'],
+            str_contains($ua, 'brave') => ['Brave', 'fa-leaf', '#fb542b'],
+            str_contains($ua, 'edg') => ['Edge', 'fa-edge', '#2a7cec'],
+            str_contains($ua, 'samsungbrowser') => ['Samsung Internet', 'fa-mobile', '#1428a0'],
+            str_contains($ua, 'ucbrowser') => ['UC Browser', 'fa-paw', '#ff7e00'],
+            str_contains($ua, 'tor') => ['Tor Browser', 'fa-mask', '#7e4798'],
+            str_contains($ua, 'chrome') && !str_contains($ua, 'edg') && !str_contains($ua, 'opr') && !str_contains($ua, 'yabrowser') && !str_contains($ua, 'vivaldi') && !str_contains($ua, 'brave') => ['Chrome', 'fa-chrome', '#f2af1c'],
+            str_contains($ua, 'firefox') => ['Firefox', 'fa-firefox-browser', '#f25a29'],
+            str_contains($ua, 'safari') && !str_contains($ua, 'chrome') => ['Safari', 'fa-safari', '#4ab0f7'],
+            str_contains($ua, 'msie') || str_contains($ua, 'trident') => ['Internet Explorer', 'fa-internet-explorer', '#157dc3'],
+            default => ['Неизвестно', 'fa-question-circle', '#999'],
+        };
+    }
 
     public function isAdmin(): bool
     {

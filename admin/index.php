@@ -1,10 +1,9 @@
 <?php
 require_once '../config/DatabaseConnect.php';
 require_once 'AdminCore.php';
-require_once '../config/ErrorHandler.php';
 
 if(!isset($_GET['access']) || $_GET['access'] !== 'ok') {
-  redirectToErrorPage('404', '');
+  header("Location: index.php");
 }
 
 if (session_status() === PHP_SESSION_NONE) {
