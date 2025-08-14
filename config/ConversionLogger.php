@@ -234,7 +234,7 @@ class ConversionLogger
 
     public static function logMessage($message, $type = 'INFO', $data = null)
     {
-        $logFile = __DIR__ . '/Conversion.log';
+        $logFile = __DIR__ . '/../logs/Conversion.log';
         $timestamp = date('Y-m-d H:i:s');
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
         $logEntry = sprintf(

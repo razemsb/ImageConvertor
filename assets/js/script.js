@@ -174,6 +174,11 @@ document.addEventListener('DOMContentLoaded', function () {
         return selectedFormat ? selectedFormat.value : 'webp';
     }
 
+    function getSelectedRatio() {
+        const r = document.querySelector('input[name="aspectRatio"]:checked');
+        return r ? r.value : 'free';
+    }
+
     function clearPreview() {
         const preview = document.getElementById('preview');
         if (preview) {
@@ -402,18 +407,34 @@ document.addEventListener('DOMContentLoaded', function () {
                 hover:bg-blue-50 hover:text-blue-800
                 border border-blue-300 rounded-xl 
                 shadow-sm transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
             `;
-
 
             toggleBtn.addEventListener('click', () => {
                 isExpanded = !isExpanded;
+
                 document.querySelectorAll('.history-item').forEach(item => {
                     const idx = parseInt(item.dataset.index);
                     if (idx >= maxVisible) {
                         item.classList.toggle('hidden', !isExpanded);
                     }
                 });
+
                 toggleBtn.textContent = isExpanded ? 'Скрыть' : 'Показать ещё';
+
+                if (!isExpanded) {
+                    const targetElement = document.getElementById('historyTop'); 
+                    if (targetElement) {
+                        const scrollOffset = 150;
+                        const elementPosition = targetElement.getBoundingClientRect().top;
+                        const offsetPosition = elementPosition + window.pageYOffset - scrollOffset;
+
+                        window.scrollTo({
+                            top: offsetPosition,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
             });
 
             historyContainer.appendChild(toggleBtn);
@@ -509,6 +530,7 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('image', file);
         formData.append('format', getSelectedFormat());
         formData.append('quality', qualitySlider.value);
+        formData.append('ratio', getSelectedRatio());
 
         progressBar.classList.remove('hidden');
         progressBarInner.style.width = '0%';

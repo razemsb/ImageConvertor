@@ -1,5 +1,6 @@
 <?php
-if (ob_get_length()) ob_clean();
+if (ob_get_length())
+    ob_clean();
 header('Content-Type: application/json');
 session_start();
 require_once("../../config/ConversionLogger.php");
@@ -54,7 +55,7 @@ if ($file['size'] > $maxSize) {
         $format,
         $quality,
         'MAX_FILE_SIZE_ERROR'
-    ); 
+    );
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'Файл слишком большой. Максимум 5 МБ']));
 }
@@ -69,8 +70,8 @@ if (!extension_loaded('gd') || !function_exists('gd_info')) {
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format ?? '',
         $quality ?? '',
-          'GD Module Error!'
-    ); 
+        'GD Module Error!'
+    );
     die(json_encode(['error' => 'GD не поддерживается на этом сервере']));
 }
 
@@ -103,8 +104,8 @@ if (!isset($_FILES['image'])) {
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format ?? '',
         $quality ?? '',
-          'FILE ERROR EXSIST!'
-    ); 
+        'FILE ERROR EXSIST!'
+    );
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'Файл не загружен']));
 }
@@ -125,7 +126,7 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
         $format,
         $quality,
         'FILE ERROR UPLOAD!'
-    ); 
+    );
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => $error_text]));
 }
@@ -159,8 +160,8 @@ if (!in_array($realMime, $allowed_types)) {
         pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
         $format ?? '',
         $quality ?? '',
-          'MIME TYPE ERROR'
-    ); 
+        'MIME TYPE ERROR'
+    );
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'Неподдерживаемый формат файла']));
 }
@@ -183,7 +184,7 @@ if ($format === 'avif' && !function_exists('imageavif')) {
         $format,
         $quality,
         $e->getMessage()
-    ); 
+    );
     header('HTTP/1.1 400 Bad Request');
     die(json_encode(['error' => 'AVIF не поддерживается на этом сервере']));
 }
@@ -194,7 +195,7 @@ try {
     switch ($file['type']) {
         case 'image/jpeg':
             $source_image = imagecreatefromjpeg($file['tmp_name']);
-            ConversionLogger::logMessage('Изображение JPEG успешно загружено', 'INFO', ['uploaded_image' =>  $file['name'],'ip' => $clientIP]);
+            ConversionLogger::logMessage('Изображение JPEG успешно загружено', 'INFO', ['uploaded_image' => $file['name'], 'ip' => $clientIP]);
             break;
         case 'image/png':
             $source_image = imagecreatefrompng($file['tmp_name']);
@@ -222,9 +223,69 @@ try {
             pathinfo($file['name'] ?? '', PATHINFO_EXTENSION) ?? '',
             $format ?? '',
             $quality ?? '',
-              'GD Module return Error!'
-        ); 
+            'GD Module return Error!'
+        );
         throw new Exception('Не удалось создать ресурс изображения (GD вернул null)');
+    }
+
+    $ratio = $_POST['ratio'] ?? 'free';
+
+    if ($ratio !== 'free' && !preg_match('/^(\d+):(\d+)$/', $ratio, $m)) {
+        ConversionLogger::logMessage('Некорректный параметр ratio', 'ERROR', ['ratio' => $ratio, 'ip' => $clientIP]);
+        header('HTTP/1.1 400 Bad Request');
+        die(json_encode(['error' => 'Некорректное соотношение сторон']));
+    }
+
+    if ($ratio !== 'free' && preg_match('/^(\d+):(\d+)$/', $ratio, $m)) {
+        $rw = max(1, (int) $m[1]);
+        $rh = max(1, (int) $m[2]);
+
+        $srcW = imagesx($source_image);
+        $srcH = imagesy($source_image);
+
+        $targetH = (int) round($srcW * $rh / $rw);
+        $cropW = $srcW;
+        $cropH = $targetH;
+
+        if ($targetH > $srcH) {
+            $cropH = $srcH;
+            $cropW = (int) round($srcH * $rw / $rh);
+        }
+
+        $cropX = (int) floor(($srcW - $cropW) / 2);
+        $cropY = (int) floor(($srcH - $cropH) / 2);
+
+        $cropped = imagecrop($source_image, [
+            'x' => $cropX,
+            'y' => $cropY,
+            'width' => $cropW,
+            'height' => $cropH
+        ]);
+
+        if ($cropped !== false) {
+            if (in_array($file['type'], ['image/png', 'image/gif'], true)) {
+                imagealphablending($cropped, false);
+                imagesavealpha($cropped, true);
+            }
+            imagedestroy($source_image);
+            $source_image = $cropped;
+
+            ConversionLogger::logMessage('Применён кроп по соотношению', 'INFO', [
+                'ratio' => $ratio,
+                'srcW' => $srcW,
+                'srcH' => $srcH,
+                'cropW' => $cropW,
+                'cropH' => $cropH,
+                'x' => $cropX,
+                'y' => $cropY,
+                'ip' => $clientIP
+            ]);
+        } else {
+            ConversionLogger::logMessage('imagecrop вернул false, кроп пропущен', 'WARNING', [
+                'ratio' => $ratio,
+                'ip' => $clientIP
+            ]);
+        }
     }
 
     $unique_name = ConversionLogger::generateUuidV4() . '-' . 'enigma-converted';
@@ -356,7 +417,7 @@ try {
         $format,
         $quality,
         $e->getMessage()
-    ); 
+    );
     header('Content-Type: application/json');
     header('HTTP/1.1 500 Internal Server Error');
     echo json_encode(['error' => $e->getMessage()]);
