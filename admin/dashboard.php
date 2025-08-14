@@ -31,6 +31,7 @@ $oldFiles = $fileManager->getOldFiles();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админ-панель | Конвертер</title>
+    <link rel="stylesheet" href="../assets/vendors/font-awesome/css/all.min.css">
     <link rel="icon" type="image/png" href="../assets/img/favicon/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="../assets/img/favicon/favicon.svg" />
     <link rel="shortcut icon" href="../assets/img/favicon/favicon.ico" />
@@ -42,13 +43,16 @@ $oldFiles = $fileManager->getOldFiles();
     <link rel="stylesheet" href="../assets/vendors/font-awesome/css/all.min.js">
     <script src="../assets/vendors/chartjs/chart.js"></script>
     <script src="../assets/js/AdminCore.js" defer></script>
-    <script src="../assets/vendors/font-awesome/js/all.min.js" crossorigin="anonymous"></script>
+    <script src="../assets/vendors/font-awesome/js/all.min.js" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+
             document.querySelectorAll('.file-action-btn').forEach(btn => {
-                btn.addEventListener('click', async () => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
                     const fileId = btn.dataset.id;
                     const action = btn.dataset.action;
+                    const row = btn.closest('tr');
 
                     try {
                         const res = await fetch('AjaxRequest.php', {
@@ -58,21 +62,23 @@ $oldFiles = $fileManager->getOldFiles();
                         });
 
                         const data = await res.json();
-                        console.log('response:', data);
-                        console.log('debug message: ', data.message);
 
                         if (data.status === 'success') {
-                            const parent = btn.closest('td');
-                            parent.innerHTML = `
-                    <button class="file-action-btn ${data.newClass} text-white px-3 py-1 rounded" 
-                            data-id="${fileId}" data-action="${data.newAction}">
+                            const statusCell = row.querySelector('td:nth-child(6)');
+                            const actionCell = row.querySelector('td:nth-child(7)');
+
+                            statusCell.innerHTML = data.newStatus === 'deleted'
+                                ? '<span class="text-red-400">Удалён</span>'
+                                : '<span class="text-green-400">Активен</span>';
+
+                            actionCell.innerHTML = `
+                    <button data-id="${fileId}" data-action="${data.newAction}"
+                        class="file-action-btn ${data.newClass} text-white px-3 py-1 rounded">
                         ${data.newLabel}
                     </button>`;
 
-                            parent.querySelector('.file-action-btn').addEventListener('click', async (e) => {
+                            actionCell.querySelector('.file-action-btn').addEventListener('click', async (e) => {
                                 e.preventDefault();
-                                e.stopPropagation();
-                                parent.querySelector('.file-action-btn').click();
                             });
                         } else {
                             alert('Ошибка при выполнении действия');
@@ -83,27 +89,68 @@ $oldFiles = $fileManager->getOldFiles();
                 });
             });
 
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentTab = urlParams.get('tab') || 'stats';
 
+            // Находим все элементы
             const tabs = document.querySelectorAll('[data-tab]');
             const sections = document.querySelectorAll('[data-tab-content]');
+            const tabButtons = document.querySelectorAll('.tab-btn');
 
+            // Функция для активации таба
+            function activateTab(tabName) {
+                // Обновляем табы
+                tabs.forEach(tab => {
+                    if (tab.getAttribute('data-tab') === tabName) {
+                        tab.classList.add('border-blue-500');
+                    } else {
+                        tab.classList.remove('border-blue-500');
+                    }
+                });
+
+                // Обновляем кнопки табов
+                tabButtons.forEach(btn => {
+                    if (btn.getAttribute('data-tab') === tabName) {
+                        btn.classList.add('active');
+                        btn.classList.remove('text-gray-400', 'hover:text-blue-300');
+                        btn.classList.add('text-blue-400');
+                    } else {
+                        btn.classList.remove('active');
+                        btn.classList.add('text-gray-400', 'hover:text-blue-300');
+                        btn.classList.remove('text-blue-400');
+                    }
+                });
+
+                // Обновляем секции
+                sections.forEach(sec => {
+                    sec.classList.toggle('hidden', sec.getAttribute('data-tab-content') !== tabName);
+                });
+
+                // Обновляем URL
+                const url = new URL(window.location);
+                url.searchParams.set('tab', tabName);
+                history.pushState({}, '', url);
+            }
+
+            // Инициализация текущего таба
+            activateTab(currentTab);
+
+            // Обработчики кликов для табов и кнопок
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
-                    const target = tab.getAttribute('data-tab');
-
-                    sections.forEach(sec => {
-                        sec.classList.toggle('hidden', sec.getAttribute('data-tab-content') !== target);
-                    });
-
-                    tabs.forEach(t => t.classList.remove('border-blue-500'));
-                    tab.classList.add('border-blue-500');
-
-                    const url = new URL(window.location);
-                    url.searchParams.set('tab', target);
-                    history.pushState({}, '', url);
+                    const targetTab = tab.getAttribute('data-tab');
+                    activateTab(targetTab);
                 });
             });
 
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetTab = btn.getAttribute('data-tab');
+                    activateTab(targetTab);
+                });
+            });
+
+            // Обработка скролла для шапки
             const header = document.getElementById('adminHeader');
             let lastScrollY = window.scrollY;
             let ticking = false;
@@ -126,20 +173,7 @@ $oldFiles = $fileManager->getOldFiles();
                     ticking = true;
                 }
             });
-
-            const buttons = document.querySelectorAll('.tab-btn');
-
-            buttons.forEach(button => {
-                button.addEventListener('click', () => {
-                    buttons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                });
-            });
-
-            const defaultTab = document.querySelector('[data-tab="stats"]');
-            if (defaultTab) defaultTab.classList.add('active');
         });
-
     </script>
 </head>
 

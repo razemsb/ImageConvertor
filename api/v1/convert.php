@@ -2,7 +2,7 @@
 if (ob_get_length()) ob_clean();
 header('Content-Type: application/json');
 session_start();
-require_once("../../logs/ConversionLogger.php");
+require_once("../../config/ConversionLogger.php");
 require_once("../../config/DatabaseConnect.php");
 
 ConversionLogger::logMessage('Запуск скрипта, проверка компонентов...', 'START', ['GD' => 'Проверка...']);

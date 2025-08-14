@@ -31,25 +31,27 @@ try {
         throw new Exception('Файловый менеджер не инициализирован');
     }
 
-    if ($data['action'] === 'delete_file') {
+    if ($data['action'] === 'delete') {
         if ($fileManager->deleteFileById($id)) {
             $response = [
                 'status' => 'success',
                 'newAction' => 'restore_file',
                 'newLabel' => 'Восстановить',
                 'newClass' => 'bg-green-500',
+                'newStatus' => 'deleted',
                 'message' => ''
             ];
         } else {
             throw new Exception('Не удалось удалить файл. Возможно, файл не существует или нет прав доступа');
         }
-    } elseif ($data['action'] === 'restore_file') {
+    } elseif ($data['action'] === 'restore') {
         if ($fileManager->restoreFileById($id)) {
             $response = [
                 'status' => 'success',
                 'newAction' => 'delete_file',
                 'newLabel' => 'Удалить',
                 'newClass' => 'bg-red-500',
+                'newStatus' => 'restored',
                 'message' => ''
             ];
         } else {

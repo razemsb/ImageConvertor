@@ -7,10 +7,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const progressBar = document.getElementById('progressBar');
     const progressBarInner = progressBar.querySelector('div');
     const historyContainer = document.getElementById('history');
-    const btn = document.getElementById('accountButton');
-    const dropdown = document.getElementById('accountDropdown');
-    const chevron = document.getElementById('accountChevron');
-    const LogoutBtn = document.getElementById('LogoutBtn');
     const deleteHistory = document.getElementById('deleteHistory');
     const deleteBtn = document.getElementById('deleteHistory');
 
@@ -32,44 +28,145 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    const userMenuButton = document.getElementById('userMenuButton');
+    const userDropdown = document.getElementById('userDropdown');
+    const dropdownOverlay = document.getElementById('dropdownOverlay');
+    const LogoutBtn = document.getElementById('LogoutBtn');
+    const html = document.documentElement;
+
+    // Переключение меню
+    function toggleMenu() {
+        const isOpen = userDropdown.classList.toggle('opacity-0');
+        userDropdown.classList.toggle('pointer-events-none');
+        userMenuButton.classList.toggle('menu-open');
+        html.classList.toggle('overflow-hidden');
+
+        if (dropdownOverlay) {
+            dropdownOverlay.classList.toggle('pointer-events-auto', !isOpen);
+        }
+    }
+
+    // Закрытие меню
+    function closeMenu() {
+        userDropdown.classList.add('opacity-0', 'pointer-events-none');
+        userMenuButton.classList.remove('menu-open');
+        html.classList.remove('overflow-hidden');
+
+        if (dropdownOverlay) {
+            dropdownOverlay.classList.remove('pointer-events-auto');
+        }
+    }
+
+    // Обработчики событий
+    if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleMenu();
+        });
+    }
+
+    // Закрытие при клике вне меню
+    document.addEventListener('click', function (e) {
+        if (!userMenuButton.contains(e.target) &&
+            !userDropdown.contains(e.target)) {
+            closeMenu();
+        }
+    });
+
+    // Обработчик выхода
+    if (LogoutBtn) {
+        LogoutBtn.addEventListener('click', function () {
+            fetch('./config/logout.php', {
+                method: 'POST',
+                credentials: 'include'
+            })
+                .then(res => {
+                    if (res.ok) {
+                        window.location.href = './index.php';
+                    } else {
+                        alert('Ошибка при выходе');
+                    }
+                })
+                .catch(() => alert('Ошибка сети'));
+        });
+    }
 
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
     const currentTime = `${hours}:${minutes}`;
 
-    function showPopUp(type = 'info', message = 'Сообщение', time = '') {
-        const containerId = 'popup-container';
+    function showPopUp({
+        type = 'info',
+        message = 'Сообщение',
+        time = '',
+        duration = 2500,
+        position = 'bottom-right'
+    } = {}) {
+
+        const containerId = `popup-container-${position}`;
         let container = document.getElementById(containerId);
+
         if (!container) {
             container = document.createElement('div');
             container.id = containerId;
-            container.className = 'popup-container';
+            container.className = `popup-container ${position}`;
             document.body.appendChild(container);
         }
 
+
         const icons = {
-            success: '<i class="fa-solid fa-thumbs-up"></i>',
-            error: '<i class="fa-solid fa-circle-exclamation"></i>',
-            info: '<i class="fa-solid fa-circle-info"></i>'
+            success: '<i class="fa-solid fa-circle-check"></i>',
+            error: '<i class="fa-solid fa-circle-xmark"></i>',
+            info: '<i class="fa-solid fa-circle-info"></i>',
+            warning: '<i class="fa-solid fa-triangle-exclamation"></i>'
         };
 
+
         const popup = document.createElement('div');
-        popup.className = `popup ${type}`;
+        popup.className = `popup popup-${type}`;
+        popup.setAttribute('role', 'alert');
+        popup.setAttribute('aria-live', 'polite');
+
         popup.innerHTML = `
-            <div class="popup-icon">${icons[type] || 'ℹ️'}</div>
-            <div class="popup-content">
-                <div class="popup-message">${message}</div>
-                <div class="popup-time">${time}</div>
-            </div>
-        `;
+      <div class="popup-icon">${icons[type] || icons.info}</div>
+      <div class="popup-content">
+        <div class="popup-message">${message}</div>
+        ${time ? `<div class="popup-time">${time}</div>` : ''}
+      </div>
+      <button class="popup-close" aria-label="Закрыть уведомление">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    `;
+
 
         container.appendChild(popup);
 
-        setTimeout(() => {
+
+        setTimeout(() => popup.classList.add('show'), 10);
+
+
+        const closePopup = () => {
+            popup.classList.remove('show');
             popup.classList.add('hide');
             popup.addEventListener('transitionend', () => popup.remove());
-        }, 2500);
+        };
+
+
+        let timeoutId = setTimeout(closePopup, duration);
+
+
+        const closeBtn = popup.querySelector('.popup-close');
+        closeBtn.addEventListener('click', () => {
+            clearTimeout(timeoutId);
+            closePopup();
+        });
+
+
+        popup.addEventListener('mouseenter', () => clearTimeout(timeoutId));
+        popup.addEventListener('mouseleave', () => {
+            timeoutId = setTimeout(closePopup, duration);
+        });
     }
 
     function getSelectedFormat() {
@@ -91,51 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    if (LogoutBtn) {
-        LogoutBtn.addEventListener('click', function () {
-            fetch('./config/logout.php', {
-                method: 'POST',
-                credentials: 'include'
-            })
-                .then(res => {
-                    if (res.ok) {
-                        window.location.reload();
-                    } else {
-                        alert('Ошибка при выходе из аккаунта');
-                    }
-                })
-                .catch(() => alert('Ошибка сети'));
-        });
-    }
-
-    if (btn && dropdown) {
-        btn.addEventListener('click', () => {
-            const isOpen = dropdown.classList.contains('opacity-100');
-
-            if (isOpen) {
-                dropdown.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
-                dropdown.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
-                chevron.style.transform = 'rotate(0deg)';
-                document.body.classList.remove('overflow-hidden');
-            } else {
-                dropdown.classList.add('opacity-100', 'pointer-events-auto', 'scale-100');
-                dropdown.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
-                chevron.style.transform = 'rotate(180deg)';
-                document.body.classList.add('overflow-hidden');
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
-                dropdown.classList.remove('opacity-100', 'pointer-events-auto', 'scale-100');
-                dropdown.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
-                chevron.style.transform = 'rotate(0deg)';
-                document.body.classList.remove('overflow-hidden');
-            }
-        });
-    }
-
-    window.addEventListener('scroll', function() {
+    window.addEventListener('scroll', function () {
         const toolbar = document.getElementById('toolbar');
         if (window.scrollY > 10) {
             toolbar.classList.add('shadow-md', 'bg-white/100');
@@ -151,9 +204,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const accountChevron = document.getElementById('accountChevron');
 
     if (accountButton && accountDropdown) {
-        accountButton.addEventListener('click', function() {
+        accountButton.addEventListener('click', function () {
             const isOpen = accountDropdown.classList.contains('opacity-0');
-            
+
             accountDropdown.classList.toggle('opacity-0', !isOpen);
             accountDropdown.classList.toggle('scale-95', !isOpen);
             accountDropdown.classList.toggle('pointer-events-none', !isOpen);
@@ -246,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.body.style.overflow = '';
             updateUIAfterDeletion();
 
-            showPopUp('info', 'Ваша история конвертаций успешно удалена!', currentTime);
+            showPopUp('info', 'Ваша история конвертаций успешно удалена!', currentTime, 2500, 'bottom-right');
         });
 
         function updateUIAfterDeletion() {
@@ -405,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (file.type.startsWith('image/')) {
                 previewAndConvertFile(file);
             } else {
-                showPopUp('ERROR', 'Файл не является изображением!', currentTime);
+                showPopUp('ERROR', 'Файл не является изображением!', currentTime, 2500, 'bottom-right');
             }
         });
     }
@@ -480,7 +533,7 @@ document.addEventListener('DOMContentLoaded', function () {
             progressBarInner.style.width = '100%';
 
             const rawResponse = await response.text();
-            //console.log('Raw response:', rawResponse);
+
 
             try {
                 data = JSON.parse(rawResponse);
@@ -488,8 +541,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('Failed to parse:', rawResponse);
                 throw e;
             }
-            //const data = await response.json();
-            //console.log('Response: сука ', data);
+
+
 
             if (!data.filename) {
                 throw new Error('Сервер не вернул имя файла');
@@ -510,14 +563,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 path: downloadPath
             });
 
-            showPopUp('success', 'Изображение успешно конвертированно!', currentTime);
+            showPopUp('success', 'Изображение успешно конвертированно!', currentTime, 2500, 'bottom-right');
 
             if (conversionHistory.length > 50) conversionHistory = conversionHistory.slice(0, 50);
             localStorage.setItem('conversionHistory', JSON.stringify(conversionHistory));
 
             const statusIndicator = previewItem.querySelector('.status-indicator');
             statusIndicator.innerHTML = `
-                <div class="flex items-center space-x-2 animate-pop-in">
+                <div class="bg-white/75 flex items-center space-x-2 animate-pop-in">
                     <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <i class="fas fa-check text-green-500 text-xs"></i>
                     </div>
@@ -565,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 } catch { }
             }
 
-            showPopUp('error', errorMsg, `${hours}:${minutes}`);
+            showPopUp('error', errorMsg, `${hours}:${minutes}`, 2500, 'bottom-right');
 
             const statusIndicator = previewItem.querySelector('.status-indicator');
             statusIndicator.innerHTML = `

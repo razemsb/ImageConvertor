@@ -11,10 +11,21 @@ $user = $auth->getUser();
 ?>
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enigma Convertor | <?= htmlspecialchars($page_title) ?></title>
+    <meta name="description" content="Бесплатный онлайн-конвертер изображений в WebP, AVIF, JPEG и PNG">
+    <?php
+    if (!empty($meta_tags)):
+        echo "\n";
+        foreach ($meta_tags as $tag):
+            $clean_tag = trim(preg_replace('/\s+/', ' ', $tag));
+            echo "    {$clean_tag}\n";
+        endforeach;
+    endif;
+    ?>
     <link rel="icon" type="image/png" href="assets/img/favicon/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon/favicon.svg" />
     <link rel="shortcut icon" href="assets/img/favicon/favicon.ico" />
@@ -24,8 +35,10 @@ $user = $auth->getUser();
     <link rel="stylesheet" href="assets/vendors/font-awesome/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/vendors/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <script src="assets/vendors/bootstrap/js/bootstrap.min.js" defer></script>
     <script src="assets/vendors/tailwindcss/script.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <?php if (!empty($additional_style)): ?>
         <?php foreach ($additional_style as $style): ?>
             <link rel="stylesheet" href="<?= htmlspecialchars($style) ?>">
@@ -40,7 +53,7 @@ $user = $auth->getUser();
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 
-        window.addEventListener('scroll', function() {
+        window.addEventListener('scroll', function () {
             const toolbar = document.getElementById('toolbar');
             if (window.scrollY > 10) {
                 toolbar.classList.add('shadow-md', 'bg-white/100');
@@ -50,24 +63,9 @@ $user = $auth->getUser();
                 toolbar.classList.add('bg-white/95');
             }
         });
-
-        const accountButton = document.getElementById('accountButton');
-        const accountDropdown = document.getElementById('accountDropdown');
-        const accountChevron = document.getElementById('accountChevron');
-
-        if (accountButton && accountDropdown) {
-            accountButton.addEventListener('click', function() {
-                const isOpen = accountDropdown.classList.contains('opacity-0');
-                
-                accountDropdown.classList.toggle('opacity-0', !isOpen);
-                accountDropdown.classList.toggle('scale-95', !isOpen);
-                accountDropdown.classList.toggle('pointer-events-none', !isOpen);
-                accountChevron.classList.toggle('transform', isOpen);
-                accountChevron.classList.toggle('rotate-180', isOpen);
-            });
-        }
     </script>
 </head>
+
 <body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
     <div class="toolbar-container sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100/50 transition-shadow duration-300"
         id="toolbar">
@@ -94,94 +92,125 @@ $user = $auth->getUser();
                         Возможности
                     </a>
                 </div>
-                <div class="ml-4 flex items-center md:ml-6">
+                <div class="relative ml-4 md:ml-6">
                     <?php if ($isAuth && $user): ?>
-                        <div class="relative" id="accountMenu">
-                            <button id="accountButton"
-                                class="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-blue-500/30 rounded-full p-1 transition-all duration-200">
-                                <div class="relative">
+                        <button id="userMenuButton" class="flex items-center gap-3 group focus:outline-none">
+                            <div class="relative">
+                                <div
+                                    class="w-10 h-10 rounded-full overflow-hidden border border-white/20 shadow-[0_4px_20px_rgba(0,0,0,0.15)] group-hover:border-blue-400/60 transition-all duration-300 group-hover:scale-105">
                                     <img src="./assets/img/other/<?= htmlspecialchars($user['avatar'] ?? 'default-avatar.png') ?>"
-                                        alt="Аватар"
-                                        class="w-8 h-8 rounded-full object-cover shadow-md ring-2 ring-white/80 transition-all duration-300 hover:ring-blue-300">
-                                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
+                                        alt="Аватар" class="w-full h-full object-cover">
                                 </div>
-                                <span
-                                    class="hidden sm:inline-block font-medium text-gray-700 hover:text-blue-600 transition-colors">
-                                    <?= htmlspecialchars($user['username'] ?? 'Пользователь') ?>
-                                </span>
-                                <svg id="accountChevron" class="w-4 h-4 text-gray-400 transition-transform duration-200"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-                            <div id="accountDropdown"
-                                class="absolute right-0 top-14 w-80 bg-white border border-neutral-200 shadow-xl rounded-3xl ring-1 ring-black/5 backdrop-blur-2xl transition-all duration-200 origin-top-right scale-95 opacity-0 pointer-events-none z-50">
-                                <div class="p-5 border-b border-neutral-100">
-                                    <div class="flex items-center gap-4">
-                                        <img src="./assets/img/other/<?= htmlspecialchars($user['avatar'] ?? 'default-avatar.png') ?>"
-                                            alt="Avatar"
-                                            class="w-12 h-12 rounded-full object-cover border border-neutral-200 shadow-sm">
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-semibold text-neutral-900 truncate">
-                                                <?= htmlspecialchars($user['username']) ?>
-                                                <?php if ($auth->isAdmin()): ?>
-                                                <p class="text-xs text-red-500 font-bold truncate">Администратор</p>
-                                            <?php endif; ?>
-                                            </p>
+                                <div
+                                    class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white shadow-md animate-pulse">
+                                </div>
+                            </div>
+
+                            <span
+                                class="hidden sm:inline font-semibold text-gray-800 group-hover:text-blue-600 transition-colors duration-200">
+                                <?= htmlspecialchars($user['username'] ?? 'Пользователь') ?>
+                            </span>
+
+                            <div
+                                class="text-gray-400 transition-transform duration-200 group-hover:text-blue-500 group-[.menu-open]:rotate-180">
+                                <i class="fas fa-chevron-down text-sm"></i>
+                            </div>
+                        </button>
+
+                        <div id="userDropdown"
+                            class="fixed inset-0 z-40 pointer-events-none opacity-0 transition-opacity duration-200 md:absolute md:inset-auto md:right-0 md:top-full md:mt-2 md:w-72">
+                            <div class="fixed inset-0 bg-black/40 backdrop-blur-sm md:hidden" id="dropdownOverlay"></div>
+                            <div
+                                class="absolute right-0 top-16 md:top-auto w-full max-w-xs md:w-72 bg-white backdrop-blur-lg rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] overflow-hidden border border-white/20 transform md:scale-95 origin-top-right transition-transform duration-200 max-h-[calc(90vh-3rem)] md:max-h-[70vh] overflow-y-auto">
+                                <div
+                                    class="h-20 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 relative backdrop-blur-sm">
+                                    <div class="absolute -bottom-8 left-4">
+                                        <div
+                                            class="w-16 h-16 rounded-full border-4 border-white bg-white overflow-hidden shadow-xl">
+                                            <img src="./assets/img/other/<?= htmlspecialchars($user['avatar'] ?? 'default-avatar.png') ?>"
+                                                alt="Аватар" class="w-full h-full object-cover">
                                         </div>
                                     </div>
                                 </div>
-                                <div class="py-2 text-sm text-neutral-800">
+
+                                <div class="pt-10 px-3 pb-3 bg-white">
+                                    <div class="ml-20">
+                                        <h3 class="font-bold text-gray-900 truncate text-lg">
+                                            <?= htmlspecialchars($user['username']) ?>
+                                        </h3>
+                                        <p class="text-xs text-gray-500 truncate">
+                                            <?= htmlspecialchars($user['email'] ?? '') ?>
+                                        </p>
+                                        <?php if ($auth->isAdmin()): ?>
+                                            <span
+                                                class="inline-block mt-1 px-2 py-0.5 text-xs font-bold text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full shadow-sm">
+                                                Администратор
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="px-2 pb-2 space-y-1">
                                     <?php if ($auth->isAdmin()): ?>
                                         <a href="admin/index.php?access=ok"
-                                            class="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition rounded-2xl group">
-                                            <i class="fas fa-gears text-blue-500 w-5 text-center transition-transform"></i>
-                                            <span class="flex-1">Админ-Панель</span>
+                                            class="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-blue-50/80 transition-all group">
+                                            <div
+                                                class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </div>
+                                            <span class="font-medium">Админ-панель</span>
                                             <span
-                                                class="bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-0.5 rounded-full">Admin</span>
+                                                class="ml-auto px-2 py-0.5 text-xs font-bold text-blue-600 bg-blue-100 rounded-full">PRO</span>
                                         </a>
                                     <?php endif; ?>
 
-                                    <?php if (isset($page_title) && $page_title !== "Аккаунт"): ?>
-                                        <a href="./<?= htmlspecialchars($user['username']) ?>"
-                                            class="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition rounded-2xl group">
-                                            <i class="fas fa-user text-blue-500 w-5 text-center transition-transform"></i>
-                                            <span>Профиль</span>
-                                        </a>
-                                    <?php endif; ?>
+                                    <!-- <a href="./profile/<?= htmlspecialchars($user['username']) ?>"
+                                        class="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-indigo-50/80 transition-all group">
+                                        <div
+                                            class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors shadow-sm">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <span class="font-medium">Мой профиль</span>
+                                    </a> -->
 
-                                    <?php if (isset($page_title) && $page_title !== "Главная"): ?>
+                                    <?php if (isset($page_title) && $page_title !== 'Главная'): ?>
                                         <a href="./index.php"
-                                            class="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition rounded-2xl group">
-                                            <i
-                                                class="fas fa-home text-blue-500 w-5 text-center group-hover:scale-110 transition-transform"></i>
-                                            <span>Главная</span>
+                                            class="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-green-50/80 transition-all group">
+                                            <div
+                                                class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors shadow-sm">
+                                                <i class="fas fa-home"></i>
+                                            </div>
+                                            <span class="font-medium">Главная</span>
                                         </a>
                                     <?php endif; ?>
                                 </div>
-                                <div class="py-2 border-t border-neutral-100">
+
+                                <div class="px-2 py-2 border-t border-gray-100/50">
                                     <button id="LogoutBtn"
-                                        class="w-full text-left flex items-center gap-3 px-5 py-3 text-red-600 hover:bg-red-50 transition rounded-2xl group">
-                                        <i class="fas fa-sign-out-alt w-5 text-center transition-transform"></i>
-                                        <span>Выйти</span>
+                                        class="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-red-50/80 transition-all group text-red-600">
+                                        <div
+                                            class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors shadow-sm">
+                                            <i class="fas fa-sign-out-alt"></i>
+                                        </div>
+                                        <span class="font-medium">Выйти</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
                     <?php else: ?>
-                        <div class="flex space-x-3">
+                        <div class="flex items-center gap-3">
                             <a href="auth.php"
-                                class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5">
-                                Вход
+                                class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:shadow-[0_4px_20px_rgba(37,99,235,0.4)] transition-all hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                                <i class="fas fa-sign-in-alt mr-2"></i>Вход
                             </a>
                             <a href="auth.php?action=register"
-                                class="px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
-                                Регистрация
+                                class="px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50/50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                                <i class="fas fa-user-plus mr-2"></i>Регистрация
                             </a>
                         </div>
                     <?php endif; ?>
                 </div>
+
             </div>
         </div>
     </div>

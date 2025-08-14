@@ -1,16 +1,16 @@
 <?php
 ob_start();
-require_once "./config/DatabaseConnect.php";
-require_once "./config/AuthConfig.php";
+require_once "../config/DatabaseConnect.php";
+require_once "../config/AuthConfig.php";
 
 $pdo = DB::connect();
 $auth = Auth::getInstance($pdo);
-$additional_scripts = ['./assets/js/account.js'];
+$additional_scripts = ['../assets/js/account.js'];
 
 
 if (!$auth->isLoggedIn()) {
     ob_end_clean();
-    header("Location: ./auth.php");
+    header("Location: ../auth.php");
     exit();
 }
 
@@ -19,7 +19,7 @@ $user = $auth->getUser();
 if (!$user) {
     $auth->logout();
     ob_end_clean();
-    header("Location: ./auth.php");
+    header("Location: ../auth.php");
     exit();
 }
 
@@ -30,7 +30,7 @@ if ($currentScript === 'account.php' && !empty($user['username'])) {
     $requestUri = $_SERVER['REQUEST_URI'] ?? '';
     if (!str_contains($requestUri, $user['username'])) {
         ob_end_clean();
-        header("Location: ./{$user['username']}");
+        header("Location: ./profile/{$user['username']}");
         exit();
     }
 }
@@ -109,7 +109,7 @@ function getBrowserInfo(string $ua): array
 [$browserName, $iconClass, $color] = getBrowserInfo($_SERVER['HTTP_USER_AGENT'] ?? '');
 
 $page_title = "Аккаунт";
-include "./assets/include/header.php";
+include "../assets/include/header.php";
 ?>
 <div class="min-h-screen bg-gradient-to-b from-white to-gray-50 py-14 px-4 font-sans text-gray-900">
     <div class="max-w-6xl mx-auto space-y-12">
@@ -129,8 +129,7 @@ include "./assets/include/header.php";
                 </h1>
                 <p class="text-sm text-gray-500">Зарегистрирован: <?= date('d.m.Y', strtotime($user['created_at'])) ?>
                 </p>
-                <div
-                    class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
                     <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Онлайн
                 </div>
             </div>
@@ -191,5 +190,5 @@ include "./assets/include/header.php";
     </div>
 </div>
 <?php
-include "./assets/include/footer.php";
+include "../assets/include/footer.php";
 ob_end_flush();

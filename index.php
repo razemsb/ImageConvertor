@@ -1,8 +1,17 @@
 <?php
+$meta_tags = [
+    '<meta property="og:title" content="Конвертер изображений онлайн">',
+    '<meta property="og:description" content="Быстрое преобразование изображений в WebP, AVIF и другие форматы">',
+    '<meta name="keywords" content="конвертер изображений, webp, avif, оптимизация картинок">',
+    '<meta name="author" content="EnigmaDevix | Razemsb">'
+];
+
 $additional_scripts = [
     './assets/js/script.js'
 ];
+
 $additional_style = [];
+
 $page_title = "Главная";
 include "./assets/include/header.php";
 ?>
@@ -119,7 +128,6 @@ include "./assets/include/header.php";
             </div>
         </div>
     </div>
-</div>
 </div>
 <div id="popup-container" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
 <button id="scrollToTopBtn"
